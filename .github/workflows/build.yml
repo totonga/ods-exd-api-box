@@ -45,7 +45,7 @@ jobs:
 
     - name: Run tests
       run: |
-        pytest tests/ -v
+        python -m unittest
 
     - name: Build distributions
       run: |

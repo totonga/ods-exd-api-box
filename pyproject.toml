@@ -44,7 +44,8 @@ dev = [
     "types-protobuf>=4.0",
     "types-grpcio>=1",
     "types-grpcio-health-checking>=1",
-    "npTdms>=1.10.0"
+    "npTdms>=1.10.0",
+    "black>=25.12.0"
 ]
 lint = [
     "commitlint>=19.0",

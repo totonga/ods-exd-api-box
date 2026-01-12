@@ -36,10 +36,14 @@
                         "source.organizeImports": "explicit"
                     }
                 },
-                "python.testing.pytestEnabled": true,
-                "python.testing.pytestArgs": [
-                    "tests"
-                ]
+                "python.testing.unittestArgs": [
+                    "-v",
+                    "-s",
+                    "./tests",
+                    "-p",
+                    "test_*.py"
+                ],
+                "python.testing.unittestEnabled": true
             }
         }
     },
