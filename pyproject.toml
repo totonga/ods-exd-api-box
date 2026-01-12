@@ -1,0 +1,142 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel", "setuptools-scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ods-exd-api-box"
+dynamic = ["version"]
+description = "Helper package to build ASAM ODS EXD API grpc plugins."
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Andreas K", email = "totonga@gmail.com"}
+]
+keywords = [
+    "asam",
+    "ods",
+    "grpc",
+    "plugin",
+    "data analysis"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Information Analysis"
+]
+dependencies = [
+    "grpcio>=1.76.0,<2.0.0",
+    "grpcio-health-checking>=1.76.0,<2.0.0",
+    "grpcio-tools>=1.76.0,<2.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.4.0",
+    "coverage>=7.0",
+    "isort>=5.12",
+    "mypy>=1.5",
+    "types-protobuf>=4.0",
+    "types-grpcio>=1",
+    "types-grpcio-health-checking>=1",
+    "npTdms>=1.10.0"
+]
+lint = [
+    "commitlint>=19.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/totonga/ods-exd-api-box"
+Documentation = "https://github.com/totonga/ods-exd-api-box/tree/main#readme"
+Repository = "https://github.com/totonga/ods-exd-api-box"
+Tracker = "https://github.com/totonga/ods-exd-api-box/issues"
+Changelog = "https://github.com/totonga/ods-exd-api-box/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+packages = ["ods_exd_api_box"]
+
+[tool.setuptools.package-data]
+ods_exd_api_box = ["py.typed", "proto/py.typed"]
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-module-docstring",
+    "missing-function-docstring",
+    "missing-class-docstring",
+]
+
+[tool.black]
+line-length = 119
+target-version = ["py312"]
+
+[tool.setuptools_scm]
+tag_regex = "^v(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
+
+[tool.isort]
+profile = "black"
+line_length = 119
+
+[tool.flake8]
+max-line-length = 119
+extend-ignore = ["E203", "W503", "W293"]
+
+[tool.pylint.format]
+max-line-length = 109
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "ods_exd_api_box.proto.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "ods_pb2"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "ods_external_data_pb2"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "ods_external_data_pb2_grpc"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "grpc"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "grpc_health.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "nptdms"
+ignore_missing_imports = true
+
+[tool.semantic_release]
+version_variables = ["server.json:version"]
+version_pattern = "v{version}"
+build_command = "pip install build && python -m build"
+publish_cmd = "pip install twine && twine upload dist/* --skip-existing"
+changelog_file = "CHANGELOG.md"
+branch = "main"
+hvcs = "github"
+commit_subject = "chore(release): version {version}"
+upload_to_pypi = true
+upload_to_vcs_release = true
+remove_dist = true
+allow_zero_version = false
