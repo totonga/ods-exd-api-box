@@ -1,6 +1,6 @@
 FROM python:3.12-slim
-LABEL org.opencontainers.image.source=https://github.com/totonga/asam_ods_exd_api_nptdms
-LABEL org.opencontainers.image.description="ASAM ODS External Data API for National Instruments TDMS files (*.tdms)"
+LABEL org.opencontainers.image.source=https://github.com/totonga/ods-exd-api-box
+LABEL org.opencontainers.image.description="Helper package to build ASAM ODS EXD API grpc plugins."
 LABEL org.opencontainers.image.licenses=MIT
 WORKDIR /app
 # Create a non-root user and change ownership of /app
