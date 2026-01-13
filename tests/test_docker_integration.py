@@ -17,7 +17,7 @@ class TestDockerContainer(unittest.TestCase):
     def setUpClass(cls):
         # build Docker-Image
         result = subprocess.run(
-            ["docker", "build", "-t", "ods-exd-api-box", "."],
+            ["docker", "build", "-f", "tests/Dockerfile.test", "-t", "ods-exd-api-box", "."],
             capture_output=True,
             text=True,
             check=False,
@@ -156,7 +156,7 @@ class TestDockerContainerWithHealthCheck(unittest.TestCase):
     def setUpClass(cls):
         # build Docker image
         result = subprocess.run(
-            ["docker", "build", "-t", "ods-exd-api-box", "."],
+            ["docker", "build", "-f", "tests/Dockerfile.test", "-t", "ods-exd-api-box", "."],
             capture_output=True,
             text=True,
             check=False,

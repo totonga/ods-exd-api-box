@@ -20,7 +20,7 @@ class TestDockerContainerTLS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         subprocess.run(
-            ["docker", "build", "-t", "ods-exd-api-box", "."],
+            ["docker", "build", "-f", "tests/Dockerfile.test", "-t", "ods-exd-api-box", "."],
             check=True,
         )
 
@@ -207,7 +207,7 @@ class TestDockerContainerTLSClient(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         subprocess.run(
-            ["docker", "build", "-t", "ods-exd-api-box", "."],
+            ["docker", "build", "-f", "tests/Dockerfile.test", "-t", "ods-exd-api-box", "."],
             check=True,
         )
 
