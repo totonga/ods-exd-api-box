@@ -41,7 +41,7 @@ class TestDockerContainer(unittest.TestCase):
             check=False,
         )
 
-        example_file_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent.resolve(), "..", "data")
+        example_file_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent.resolve(), "data")
         data_folder = pathlib.Path(example_file_path).absolute().resolve()
         cp = subprocess.run(
             [
@@ -180,7 +180,7 @@ class TestDockerContainerWithHealthCheck(unittest.TestCase):
             check=False,
         )
 
-        example_file_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent.resolve(), "..", "data")
+        example_file_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent.resolve(), "data")
         data_folder = pathlib.Path(example_file_path).absolute().resolve()
         cp = subprocess.run(
             [

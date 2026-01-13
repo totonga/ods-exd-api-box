@@ -25,7 +25,7 @@ class TestDockerContainerTLS(unittest.TestCase):
             check=True,
         )
 
-        example_data_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent.resolve(), "..", "data")
+        example_data_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent.resolve(), "data")
         cls.data_folder = pathlib.Path(example_data_path).absolute().resolve()
         cls.certs_folder = (pathlib.Path(__file__).parent / "certs").absolute().resolve()
 
@@ -220,7 +220,7 @@ class TestDockerContainerTLSClient(unittest.TestCase):
             check=True,
         )
 
-        example_data_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent.resolve(), "..", "data")
+        example_data_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent.resolve(), "data")
         cls.data_folder = pathlib.Path(example_data_path).absolute().resolve()
         cls.certs_folder = (pathlib.Path(__file__).parent / "certs").absolute().resolve()
 

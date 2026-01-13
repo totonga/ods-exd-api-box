@@ -19,7 +19,7 @@ class TestExdApi(unittest.TestCase):
         FileHandlerRegistry.register(file_type_name="test", factory=ExternalDataFile)
 
     def _get_example_file_path(self, file_name: str) -> str:
-        example_file_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent.resolve(), "..", "data", file_name)
+        example_file_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent.resolve(), "data", file_name)
         return pathlib.Path(example_file_path).absolute().resolve().as_uri()
 
     def test_open(self):
