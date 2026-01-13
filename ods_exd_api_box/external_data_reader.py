@@ -110,7 +110,7 @@ class ExternalDataReader(exd_grpc.ExternalDataReader):
     def __init__(self) -> None:
         self.connect_count: int = 0
         self.connection_map: dict[str, exd_api.Identifier] = {}
-        self.file_map: dict[str, FileMapEntry] = {}
+        self.file_map: dict[tuple[str, str | None], FileMapEntry] = {}
         self.lock: threading.Lock = threading.Lock()
 
     def __get_id(self, identifier: exd_api.Identifier) -> str:
@@ -127,22 +127,28 @@ class ExternalDataReader(exd_grpc.ExternalDataReader):
     def __get_path(self, file_url: str) -> str:
         return self.__uri_to_path(file_url)
 
+    def __get_file_map_key(self, identifier: exd_api.Identifier) -> tuple[str, tuple[str, str | None]]:
+        """Create a composite key from identifier URL and parameters, returning both URL and key."""
+        file_path = self.__get_path(identifier.url)
+        file_map_key = (file_path, identifier.parameters)
+        return (file_path, file_map_key)
+
     def __open_file(self, identifier: exd_api.Identifier) -> str:
         with self.lock:
             connection_id = self.__get_id(identifier)
-            connection_url = self.__get_path(identifier.url)
-            if connection_url not in self.file_map:
-                self.log.info("Opening external data file '%s' as connection id '%s'.", connection_url, connection_id)
-                file_handle = FileHandlerRegistry.create_from_path(connection_url, identifier.parameters)
-                self.file_map[connection_url] = FileMapEntry(file=file_handle, ref_count=0)
+            file_path, file_map_key = self.__get_file_map_key(identifier)
+            if file_map_key not in self.file_map:
+                self.log.info("Opening external data file '%s' as connection id '%s'.", file_path, connection_id)
+                file_handle = FileHandlerRegistry.create_from_path(file_path, identifier.parameters)
+                self.file_map[file_map_key] = FileMapEntry(file=file_handle, ref_count=0)
                 self.log.debug("File handler created and added to file_map")
             else:
-                self.log.debug("File '%s' already in file_map, reusing existing handler", connection_url)
-            self.file_map[connection_url].ref_count += 1
+                self.log.debug("File '%s' already in file_map, reusing existing handler", file_path)
+            self.file_map[file_map_key].ref_count += 1
             self.log.debug(
                 "Incremented ref_count for '%s' to %s",
-                connection_url,
-                self.file_map[connection_url].ref_count,
+                file_path,
+                self.file_map[file_map_key].ref_count,
             )
             return connection_id
 
@@ -151,13 +157,13 @@ class ExternalDataReader(exd_grpc.ExternalDataReader):
         if identifier is None:
             self.log.error("Handle '%s' not found in connection_map", handle.uuid)
             raise KeyError(f"Handle '{handle.uuid}' not found.")
-        connection_url = self.__get_path(identifier.url)
-        entry = self.file_map.get(connection_url)
+        file_path, file_map_key = self.__get_file_map_key(identifier)
+        entry = self.file_map.get(file_map_key)
         if entry is None:
-            self.log.error("Connection URL '%s' not found in file_map for handle '%s'", connection_url, handle.uuid)
-            raise KeyError(f"Connection URL '{connection_url}' not found.")
+            self.log.error("Connection URL '%s' not found in file_map for handle '%s'", file_path, handle.uuid)
+            raise KeyError(f"Connection URL '{file_path}' not found.")
         entry.last_access_time = time.time()
-        self.log.debug("Updated last_access_time for handle '%s' (file: '%s')", handle.uuid, connection_url)
+        self.log.debug("Updated last_access_time for handle '%s' (file: '%s')", handle.uuid, file_path)
         return entry.file, identifier
 
     def __close_file(self, handle: exd_api.Handle) -> None:
@@ -166,18 +172,18 @@ class ExternalDataReader(exd_grpc.ExternalDataReader):
             if identifier is None:
                 self.log.error("Handle '%s' not found in connection_map for close", handle.uuid)
                 raise KeyError(f"Handle '{handle.uuid}' not found for close.")
-            connection_url = self.__get_path(identifier.url)
+            file_path, file_map_key = self.__get_file_map_key(identifier)
             self.connection_map.pop(handle.uuid)
             self.log.debug("Removed handle '%s' from connection_map", handle.uuid)
-            entry = self.file_map.get(connection_url)
+            entry = self.file_map.get(file_map_key)
             if entry is None:
-                self.log.error("Connection URL '%s' not found in file_map for close", connection_url)
-                raise KeyError(f"Connection URL '{connection_url}' not found for close.")
+                self.log.error("Connection URL '%s' not found in file_map for close", file_path)
+                raise KeyError(f"Connection URL '{file_path}' not found for close.")
             if entry.ref_count > 1:
                 entry.ref_count -= 1
-                self.log.debug("Decremented ref_count for '%s' to %s", connection_url, entry.ref_count)
+                self.log.debug("Decremented ref_count for '%s' to %s", file_path, entry.ref_count)
             else:
-                self.log.info("Closing file '%s' (ref_count reached 0)", connection_url)
+                self.log.info("Closing file '%s' (ref_count reached 0)", file_path)
                 entry.file.close()
-                self.file_map.pop(connection_url)
-                self.log.debug("File removed from file_map: '%s'", connection_url)
+                self.file_map.pop(file_map_key)
+                self.log.debug("File removed from file_map: '%s'", file_path)
