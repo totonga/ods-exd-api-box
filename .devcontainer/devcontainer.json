@@ -47,6 +47,6 @@
             }
         }
     },
-    "postCreateCommand": "pip install -e . && pip install -e '.[dev]' && pre-commit install --install-hooks && pre-commit install --hook-type commit-msg",
+    "postCreateCommand": "pip install --upgrade pip && pip install -e . && pip install -e '.[dev]' && pre-commit install --install-hooks && pre-commit install --hook-type commit-msg",
     "remoteUser": "vscode"
 }
