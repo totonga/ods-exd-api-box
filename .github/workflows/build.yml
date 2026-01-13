@@ -98,10 +98,8 @@ jobs:
         files: dist/*
         token: ${{ github.token }}
 
-    # - name: Publish to PyPI
-    #   if: steps.release.outputs.released == 'true'
-    #   uses: pypa/gh-action-pypi-publish@release/v1
-    #   with:
-    #     packages-dir: dist/
-
-
+    - name: Publish to PyPI
+      if: steps.release.outputs.released == 'true'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: dist/
