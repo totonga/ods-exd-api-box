@@ -32,7 +32,8 @@ classifiers = [
 dependencies = [
     "grpcio>=1.76.0,<2.0.0",
     "grpcio-health-checking>=1.76.0,<2.0.0",
-    "grpcio-tools>=1.76.0,<2.0.0"
+    "grpcio-tools>=1.76.0,<2.0.0",
+    "npTdms>=1.10.0"
 ]
 
 [project.optional-dependencies]
@@ -77,6 +78,7 @@ target-version = ["py312"]
 
 [tool.setuptools_scm]
 tag_regex = "^v(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
+fallback_version = "0.0.1"
 
 [tool.isort]
 profile = "black"
