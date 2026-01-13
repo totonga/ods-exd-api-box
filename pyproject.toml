@@ -133,7 +133,6 @@ module = "nptdms"
 ignore_missing_imports = true
 
 [tool.semantic_release]
-version_variables = ["server.json:version"]
 version_pattern = "v{version}"
 build_command = "pip install build && python -m build"
 publish_cmd = "pip install twine && twine upload dist/* --skip-existing"

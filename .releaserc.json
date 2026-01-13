@@ -95,8 +95,7 @@
             {
                 "assets": [
                     "CHANGELOG.md",
-                    "pyproject.toml",
-                    "server.json"
+                    "pyproject.toml"
                 ],
                 "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
             }
