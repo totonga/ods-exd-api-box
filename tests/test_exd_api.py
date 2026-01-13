@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import pathlib
 import unittest
@@ -6,6 +8,7 @@ from google.protobuf.json_format import MessageToJson
 
 from ods_exd_api_box import ExternalDataReader, FileHandlerRegistry, exd_api, ods
 from tests.external_data_file import ExternalDataFile
+from tests.mock_servicer_context import MockServicerContext
 
 
 class TestExdApi(unittest.TestCase):
@@ -21,21 +24,23 @@ class TestExdApi(unittest.TestCase):
 
     def test_open(self):
         service = ExternalDataReader()
+        context = MockServicerContext()
         handle = service.Open(
-            exd_api.Identifier(url=self._get_example_file_path("dummy.exd_api_test"), parameters=""), None
+            exd_api.Identifier(url=self._get_example_file_path("dummy.exd_api_test"), parameters=""), context
         )
         try:
             pass
         finally:
-            service.Close(handle, None)
+            service.Close(handle, context)
 
     def test_structure(self):
         service = ExternalDataReader()
+        context = MockServicerContext()
         handle = service.Open(
-            exd_api.Identifier(url=self._get_example_file_path("dummy.exd_api_test"), parameters=""), None
+            exd_api.Identifier(url=self._get_example_file_path("dummy.exd_api_test"), parameters=""), context
         )
         try:
-            structure = service.GetStructure(exd_api.StructureRequest(handle=handle), None)
+            structure = service.GetStructure(exd_api.StructureRequest(handle=handle), context)
 
             self.assertEqual(structure.name, "dummy.exd_api_test")
             self.assertEqual(len(structure.groups), 1)
@@ -47,16 +52,18 @@ class TestExdApi(unittest.TestCase):
             self.assertEqual(structure.groups[0].channels[0].data_type, ods.DataTypeEnum.DT_DOUBLE)
             self.assertEqual(structure.groups[0].channels[1].data_type, ods.DataTypeEnum.DT_DOUBLE)
         finally:
-            service.Close(handle, None)
+            service.Close(handle, context)
 
     def test_get_values(self):
         service = ExternalDataReader()
+        context = MockServicerContext()
         handle = service.Open(
-            exd_api.Identifier(url=self._get_example_file_path("dummy.exd_api_test"), parameters=""), None
+            exd_api.Identifier(url=self._get_example_file_path("dummy.exd_api_test"), parameters=""), context
         )
         try:
             values = service.GetValues(
-                exd_api.ValuesRequest(handle=handle, group_id=0, channel_ids=[0, 1], start=0, limit=4), None
+                exd_api.ValuesRequest(handle=handle, group_id=0, channel_ids=[0, 1], start=0, limit=4),
+                context,
             )
 
             self.assertEqual(values.id, 0)
@@ -77,4 +84,4 @@ class TestExdApi(unittest.TestCase):
             )
 
         finally:
-            service.Close(handle, None)
+            service.Close(handle, context)
