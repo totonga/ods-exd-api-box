@@ -95,10 +95,10 @@ class TestDockerContainerTLS(unittest.TestCase):
         with grpc.secure_channel(f"localhost:{self.tls_port}", channel_credentials) as channel:
             grpc.channel_ready_future(channel).result(timeout=5)
             service = exd_grpc.ExternalDataReaderStub(channel)
-            handle = service.Open(exd_api.Identifier(url="/data/raw1.tdms", parameters=""), None)
+            handle = service.Open(exd_api.Identifier(url="/data/dummy.exd_api_test", parameters=""), None)
             try:
                 structure = service.GetStructure(exd_api.StructureRequest(handle=handle), None)
-                self.assertEqual(structure.name, "raw1.tdms")
+                self.assertEqual(structure.name, "dummy.exd_api_test")
             finally:
                 service.Close(handle, None)
 
@@ -119,12 +119,12 @@ class TestDockerContainerTLS(unittest.TestCase):
         with self._get_tls_channel() as channel:
             service = exd_grpc.ExternalDataReaderStub(channel)
 
-            handle = service.Open(exd_api.Identifier(url="/data/raw1.tdms", parameters=""), None)
+            handle = service.Open(exd_api.Identifier(url="/data/dummy.exd_api_test", parameters=""), None)
             try:
                 structure = service.GetStructure(exd_api.StructureRequest(handle=handle), None)
                 logging.info(MessageToJson(structure))
 
-                self.assertEqual(structure.name, "raw1.tdms")
+                self.assertEqual(structure.name, "dummy.exd_api_test")
                 self.assertEqual(len(structure.groups), 1)
                 self.assertEqual(structure.groups[0].number_of_rows, 2000)
                 self.assertEqual(len(structure.groups[0].channels), 7)
@@ -140,7 +140,7 @@ class TestDockerContainerTLS(unittest.TestCase):
         with self._get_tls_channel() as channel:
             service = exd_grpc.ExternalDataReaderStub(channel)
 
-            handle = service.Open(exd_api.Identifier(url="/data/raw1.tdms", parameters=""), None)
+            handle = service.Open(exd_api.Identifier(url="/data/dummy.exd_api_test", parameters=""), None)
 
             try:
                 values = service.GetValues(
@@ -180,23 +180,17 @@ class TestDockerContainerTLS(unittest.TestCase):
         with grpc.insecure_channel(f"localhost:{self.health_check_port}") as channel:
             stub = health_pb2_grpc.HealthStub(channel)
             response = stub.Check(
-                health_pb2.HealthCheckRequest(  # pylint: disable=no-member
-                    service="asam.ods.ExternalDataReader"
-                ),
+                health_pb2.HealthCheckRequest(service="asam.ods.ExternalDataReader"),  # pylint: disable=no-member
                 timeout=5,
             )
-            self.assertEqual(
-                response.status, health_pb2.HealthCheckResponse.SERVING  # pylint: disable=no-member
-            )
+            self.assertEqual(response.status, health_pb2.HealthCheckResponse.SERVING)  # pylint: disable=no-member
 
     def test_health_check_watch(self):
         """Test that the health check watch stream works."""
         with grpc.insecure_channel(f"localhost:{self.health_check_port}") as channel:
             stub = health_pb2_grpc.HealthStub(channel)
             responses = stub.Watch(
-                health_pb2.HealthCheckRequest(  # pylint: disable=no-member
-                    service="asam.ods.ExternalDataReader"
-                ),
+                health_pb2.HealthCheckRequest(service="asam.ods.ExternalDataReader"),  # pylint: disable=no-member
                 timeout=5,
             )
             # Get first response
@@ -300,12 +294,12 @@ class TestDockerContainerTLSClient(unittest.TestCase):
         with self._get_mtls_channel() as channel:
             service = exd_grpc.ExternalDataReaderStub(channel)
 
-            handle = service.Open(exd_api.Identifier(url="/data/raw1.tdms", parameters=""), None)
+            handle = service.Open(exd_api.Identifier(url="/data/dummy.exd_api_test", parameters=""), None)
             try:
                 structure = service.GetStructure(exd_api.StructureRequest(handle=handle), None)
                 logging.info(MessageToJson(structure))
 
-                self.assertEqual(structure.name, "raw1.tdms")
+                self.assertEqual(structure.name, "dummy.exd_api_test")
                 self.assertEqual(len(structure.groups), 1)
                 self.assertEqual(structure.groups[0].number_of_rows, 2000)
                 self.assertEqual(len(structure.groups[0].channels), 7)
@@ -321,7 +315,7 @@ class TestDockerContainerTLSClient(unittest.TestCase):
         with self._get_mtls_channel() as channel:
             service = exd_grpc.ExternalDataReaderStub(channel)
 
-            handle = service.Open(exd_api.Identifier(url="/data/raw1.tdms", parameters=""), None)
+            handle = service.Open(exd_api.Identifier(url="/data/dummy.exd_api_test", parameters=""), None)
 
             try:
                 values = service.GetValues(
