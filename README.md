@@ -5,77 +5,43 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Type checking: mypy](https://img.shields.io/badge/type%20checking-mypy-blue.svg)](http://mypy-lang.org/)
 
-A production-ready [ASAM ODS EXD-API](https://www.asam.net/standards/detail/ods/) implementation for reading [National Instruments TDMS](https://www.ni.com/en/support/documentation/supplemental/06/the-ni-tdms-file-format.html) files. Provides a gRPC service with full type safety and comprehensive error handling.
+## ASAM ODS EXD-API Architecture
 
-## Features
+```mermaid
+sequenceDiagram
 
-- 🔄 **ASAM ODS EXD-API Compliant** - Full implementation of the ASAM ODS External Data API specification
-- 📊 **TDMS Support** - Read NI TDMS files with automatic channel grouping and length mapping
-- 🔒 **TLS/SSL Support** - Optional transport layer security with mutual TLS support
-- 🐳 **Docker Ready** - Pre-built images available on GitHub Container Registry
-- 🛡️ **Type Safe** - 100% type hints with mypy validation
-- 📝 **Well Documented** - Comprehensive docstrings and examples
-- 🧪 **Tested** - Comprehensive test suite with Docker integration tests
+actor CLIENT as Client
+participant PDTT as 🛠️Importer
+participant PODS as 🗃️ASAM ODS server
+participant PLUGIN as 📊EXD-API plugin
+participant FILE as 🗂️File Storage
 
-## Quick Start
+autonumber
 
-### Installation
+opt Import phase
+  FILE ->>+ PDTT: New file shows up
+  PDTT ->>+ PLUGIN : Get Structure
+  PLUGIN -> FILE: Extract content information
+  PLUGIN ->> PLUGIN: Create Structure
+  PLUGIN ->>- PDTT: Return Structure
+  PDTT ->> PODS: Import ODS structure
+  Note right of PDTT: Create hierarchy<br/>AoTest,AoMeasurement,...
+  PDTT ->>- PODS: Add External Data info
+  Note right of PDTT: Attach AoFile ... for external data<br/>AoFile,AoSubmatrix,AoLocalColumn,...
+end
 
-**Requirements:** Python 3.12 or higher
+Note over CLIENT, FILE: Now we can work with the imported files
 
-```bash
-# Clone the repository
-git clone https://github.com/totonga/asam_ods_exd_api_nptdms.git
-cd asam_ods_exd_api_nptdms
-
-# Install the package
-pip install -e .
+loop Runtime phase
+  CLIENT ->> PODS: Establish ODS session
+  CLIENT ->> PODS: Work with meta data imported from structure
+  CLIENT ->> PODS: Access external channel in preview
+  PODS ->> PLUGIN: GetValues
+  PLUGIN ->> FILE: Get Channel values
+  PLUGIN ->> PODS: Return values of channels
+  PODS ->> CLIENT: Return values needed for plot
+end
 ```
-
-### Running the Server
-
-```bash
-python external_data_file.py
-```
-
-The server will start listening on `localhost:50051`.
-
-### Using Docker
-
-```bash
-# Pull the pre-built image
-docker pull ghcr.io/totonga/asam-ods-exd-api-nptdms:latest
-
-# Run the container
-docker run -p 50051:50051 ghcr.io/totonga/asam-ods-exd-api-nptdms:latest
-```
-
-## Project Structure
-
-```
-ods_exd_api_nptdms/
-├── ods_exd_api_box/            # ASAM ODS EXD API abstraction
-├── external_data_file.py       # TDMS file handler & entry point
-├── tests/                      # Comprehensive test suite
-├── data/                       # Example TDMS files
-├── example_access_exd_api.ipynb # Interactive tutorial
-├── pyproject.toml              # Project configuration
-└── README.md                   # This file
-```
-
-## Architecture
-
-### Core Components
-
-- **`external_data_file.py`** - TDMS-specific handler using the `npTDMS` library
-
-### TDMS Channel Mapping
-
-The TDMS format allows channels of different lengths within a group, but the ASAM EXD API requires uniform row counts per group. This implementation handles this by:
-
-1. Analyzing all channels in a group by their length
-2. Creating sub-groups for each unique channel length
-3. Mapping channel indices transparently
 
 ## Configuration & Usage
 
@@ -147,19 +113,19 @@ pip install -e ".[dev]"
 ### Type Checking
 
 ```bash
-mypy . --config-file=mypy.ini
+mypy .
 ```
 
 ### Running Tests
 
 ```bash
-python -m pytest tests/
+python -m unittest discover -s tests
 ```
 
 ### Running Docker Integration Tests
 
 ```bash
-python -m pytest tests/test_docker_integration.py
+python -m unittest tests.test_docker_integration -v
 ```
 
 ### Code Style
@@ -187,54 +153,6 @@ python3 -m grpc_tools.protoc \
   --pyi_out=ods_exd_api_box/proto/. \
   --grpc_python_out=ods_exd_api_box/proto/. \
   ods.proto ods_external_data.proto
-```
-
-## Examples
-
-### Jupyter Notebook
-
-See [example_access_exd_api.ipynb](example_access_exd_api.ipynb) for an interactive walkthrough with detailed examples.
-
-## Docker Deployment
-
-### Pre-built Images
-
-Pre-built images are automatically published to GitHub Container Registry for every release:
-
-```bash
-docker pull ghcr.io/totonga/asam-ods-exd-api-nptdms:latest
-docker pull ghcr.io/totonga/asam-ods-exd-api-nptdms:0.1.0  # specific version
-```
-
-### Build Custom Image
-
-```bash
-docker build -t my-tdms-server:latest .
-```
-
-### Example Deployment
-
-**With data volume:**
-
-```bash
-docker run \
-  -v /path/to/data:/data \
-  -p 50051:50051 \
-  ghcr.io/totonga/asam-ods-exd-api-nptdms:latest
-```
-
-**With health checks:**
-
-```bash
-docker run \
-  -p 50051:50051 \
-  --health-cmd="python -c 'import grpc; grpc.insecure_channel(\"localhost:50052\").close()' || exit 1" \
-  --health-interval=10s \
-  --health-timeout=5s \
-  --health-retries=3 \
-  ghcr.io/totonga/asam-ods-exd-api-nptdms:latest \
-  --health-check-enabled \
-  --health-check-port 50052
 ```
 
 ## Performance Considerations
@@ -268,15 +186,16 @@ Ensure all dependencies are installed with type stubs:
 
 ```bash
 pip install -e ".[dev]"
-mypy . --config-file=mypy.ini
+mypy .
 ```
 
 ## Contributing
 
 Contributions are welcome! Please:
 
-1. Ensure type checking passes: `mypy . --config-file=mypy.ini`
-2. Run tests: `pytest tests/`
+0. Use dev container or set up local dev environment
+1. Ensure type checking passes: `mypy .
+2. Run tests: `python -m unittest discover -s tests`
 3. Follow code style (Black, isort)
 4. Add tests for new features
 
@@ -288,6 +207,5 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - [ASAM ODS Standard](https://www.asam.net/standards/detail/ods/)
 - [ASAM ODS GitHub Repository](https://github.com/asam-ev/ASAM-ODS-Interfaces)
-- [NI TDMS File Format](https://www.ni.com/en/support/documentation/supplemental/06/the-ni-tdms-file-format.html)
-- [npTDMS Library](https://pypi.org/project/npTDMS/)
 - [gRPC Documentation](https://grpc.io/docs/)
+- [Peak-Solution Data Management Learning Path](https://peak-solution.github.io/data_management_learning_path/exd_api/overview.html)

@@ -1,6 +1,7 @@
 *.proto
 .venv/
-__pycache__/
+__pycache__
 build/
 dist/
 *.egg-info/
+.mypy_cache/
