@@ -1,0 +1,105 @@
+name: Build, Test and Release
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build wheel setuptools setuptools-scm
+
+    - name: Install package with dev dependencies
+      run: |
+        pip install -e '.[dev]'
+
+    - name: Run tests
+      run: |
+        python -m unittest
+
+    - name: Build distributions
+      run: |
+        python -m build
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v6
+      with:
+        name: python-package-distributions
+        path: dist/
+        retention-days: 7
+
+  release:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Release
+      id: release
+      uses: python-semantic-release/python-semantic-release@v10.5.3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        git_committer_name: "github-actions"
+        git_committer_email: "actions@users.noreply.github.com"
+
+    - name: Install build dependencies
+      if: steps.release.outputs.released == 'true'
+      run: |
+        python -m pip install --upgrade pip
+        pip install build wheel setuptools setuptools-scm
+
+    - name: Rebuild distributions (if released)
+      if: steps.release.outputs.released == 'true'
+      run: |
+        rm -rf dist/
+        python -m build
+
+    - name: Create Release with artifacts
+      if: steps.release.outputs.released == 'true'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ steps.release.outputs.version }}
+        files: dist/*
+        token: ${{ github.token }}
+
+    - name: Publish to PyPI
+      if: steps.release.outputs.released == 'true'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: dist/

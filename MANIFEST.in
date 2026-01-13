@@ -1,0 +1,5 @@
+
+# Project documentation and metadata
+include README.md
+include LICENSE
+include pyproject.toml
