@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import ods_external_data_pb2 as ods__external__data__pb2
+from . import ods_external_data_pb2 as ods__external__data__pb2
 
 GRPC_GENERATED_VERSION = '1.76.0'
 GRPC_VERSION = grpc.__version__
@@ -102,7 +102,7 @@ class ExternalDataReaderServicer(object):
         """
         Reads external data like ASAM ODS valuematrix-read in submatrix mode.
         With this method the channel names and/or data can be retrieved.
-        Channels are addressed using pattern matching their names 
+        Channels are addressed using pattern matching their names
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

@@ -33,7 +33,6 @@ dependencies = [
     "grpcio>=1.76.0,<2.0.0",
     "grpcio-health-checking>=1.76.0,<2.0.0",
     "grpcio-tools>=1.76.0,<2.0.0",
-    "npTdms>=1.10.0"
 ]
 
 [project.optional-dependencies]
@@ -46,7 +45,6 @@ dev = [
     "types-protobuf>=4.0",
     "types-grpcio>=1",
     "types-grpcio-health-checking>=1",
-    "npTdms>=1.10.0",
     "python-semantic-release>=10.5.3",
     "pre-commit>=3.0"
 ]
@@ -77,6 +75,7 @@ disable = [
 [tool.black]
 line-length = 119
 target-version = ["py312"]
+exclude = "ods_exd_api_box/proto/.*\\.py"
 
 [tool.setuptools_scm]
 tag_regex = "^v(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
@@ -85,13 +84,14 @@ fallback_version = "0.0.1"
 [tool.isort]
 profile = "black"
 line_length = 119
+skip_glob = ["ods_exd_api_box/proto/*.py"]
 
 [tool.flake8]
 max-line-length = 119
 extend-ignore = ["E203", "W503", "W293"]
 
 [tool.pylint.format]
-max-line-length = 109
+max-line-length = 119
 
 [tool.mypy]
 python_version = "3.12"
@@ -126,10 +126,6 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "grpc_health.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "nptdms"
 ignore_missing_imports = true
 
 [tool.semantic_release]
