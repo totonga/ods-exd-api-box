@@ -1,8 +1,7 @@
 """Comprehensive tests for ParamParser class."""
-import json
 import base64
 import unittest
-from ods_exd_api_box.param_parser import ParamParser
+from ods_exd_api_box.utils import ParamParser
 
 
 class TestParamParserBasic(unittest.TestCase):

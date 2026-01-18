@@ -46,7 +46,8 @@ dev = [
     "types-grpcio>=1",
     "types-grpcio-health-checking>=1",
     "python-semantic-release>=10.5.3",
-    "pre-commit>=3.0"
+    "pre-commit>=3.0",
+    "numpy>=2.3,<3.0"
 ]
 lint = [
     "commitlint>=19.0",
