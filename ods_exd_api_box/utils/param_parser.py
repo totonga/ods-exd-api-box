@@ -1,16 +1,15 @@
-
 """
 To simply parse parameters from a string into a dictionary.
 """
-import json
-import re
+
 import base64
+import json
 
 
 class ParamParser:
 
     @staticmethod
-    def parse_params(parameters: str) -> dict[str, str]:
+    def parse_params(parameters: str | None) -> dict[str, object]:
         """Parse a parameter string into a dictionary.
 
         Args:
@@ -38,32 +37,35 @@ class ParamParser:
         trimmed = parameters.strip()
 
         # Step 2: Check for B64: prefix
-        if trimmed.startswith('B64:'):
+        if trimmed.startswith("B64:"):
             try:
                 encoded = trimmed[4:]  # Remove 'B64:' prefix
-                decoded = base64.b64decode(encoded).decode('utf-8').strip()
+                decoded = base64.b64decode(encoded).decode("utf-8").strip()
                 return ParamParser.parse_params(decoded)
             except (ValueError, UnicodeDecodeError) as e:
                 raise ValueError(f"Invalid base64 encoding: {e}")
 
         # Step 3: Parse JSON or semicolon-separated
-        if trimmed.startswith('{'):
+        if trimmed.startswith("{"):
             # If it looks like JSON, parse it as JSON
             try:
-                return json.loads(trimmed)
+                rv = json.loads(trimmed)
+                if not isinstance(rv, dict):
+                    raise ValueError("JSON parameters must be an object/dictionary")
+                return rv
             except json.JSONDecodeError as e:
                 raise ValueError(f"Invalid JSON format: {e.msg}")
 
         # Parse as semicolon-separated key=value pairs
-        param_dict = {}
+        param_dict: dict[str, object] = {}
         if trimmed:  # Only process if not empty
-            for pair in trimmed.split(';'):
+            for pair in trimmed.split(";"):
                 pair = pair.strip()
                 if not pair:  # Skip empty pairs
                     continue
-                if '=' not in pair:
+                if "=" not in pair:
                     raise ValueError(f"Invalid parameter format: '{pair}' must contain '='")
-                key, value = pair.split('=', 1)
+                key, value = pair.split("=", 1)
                 key = key.strip()
                 value = value.strip()
                 if not key:

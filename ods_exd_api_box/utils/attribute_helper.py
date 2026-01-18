@@ -1,8 +1,11 @@
 """Helper functions for adding attributes to ASAM ODS structures."""
+
 from ods_exd_api_box.proto import ods
+
 from . import TimeHelper
 
-class AttribsHelper:
+
+class AttributeHelper:
     """Helper class to add attributes to ASAM ODS structures."""
 
     @staticmethod
@@ -26,8 +29,6 @@ class AttribsHelper:
             elif isinstance(value, str):
                 attributes.variables[name].string_array.values.append(value)
             elif TimeHelper.is_datetime_type(value):
-                attributes.variables[name].string_array.values.append(
-                    TimeHelper.to_asam_ods_time(value))
+                attributes.variables[name].string_array.values.append(TimeHelper.to_asam_ods_time(value))
             else:
-                raise ValueError(
-                    f'Attribute "{name}": "{value}" not assignable')
+                raise ValueError(f'Attribute "{name}": "{value}" not assignable')

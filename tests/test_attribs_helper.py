@@ -1,17 +1,17 @@
 """Comprehensive tests for AttribsHelper class."""
+
 import datetime
 import unittest
-from unittest.mock import patch
 
-from ods_exd_api_box.utils import AttribsHelper, TimeHelper
 from ods_exd_api_box.proto import ods
+from ods_exd_api_box.utils import AttributeHelper, TimeHelper
 
 
 class TestAttribsHelperTimeConversion(unittest.TestCase):
     """Test time conversion to ASAM ODS format."""
 
     def setUp(self):
-        self.helper = AttribsHelper()
+        self.helper = AttributeHelper()
 
     def test_python_datetime_with_microseconds(self):
         """Test Python datetime conversion with microseconds."""
@@ -56,7 +56,7 @@ class TestAttribsHelperTimeConversion(unittest.TestCase):
         timestamp = 1000.123456789
         result = TimeHelper.to_asam_ods_time(timestamp)
         # Should preserve nanoseconds
-        self.assertRegex(result, r'^\d{14}\d+$')  # Date + optional fractions
+        self.assertRegex(result, r"^\d{14}\d+$")  # Date + optional fractions
         self.assertGreater(len(result), 14)  # Should have fractional part
 
     def test_unix_timestamp_float_with_trailing_zeros(self):
@@ -65,7 +65,7 @@ class TestAttribsHelperTimeConversion(unittest.TestCase):
         result = TimeHelper.to_asam_ods_time(timestamp)
         # Should have fractional part without trailing zeros
         self.assertGreater(len(result), 14)  # Should have fractional part
-        self.assertFalse(result.endswith('0'))  # No trailing zeros
+        self.assertFalse(result.endswith("0"))  # No trailing zeros
 
     def test_unix_timestamp_zero(self):
         """Test Unix timestamp at epoch."""
@@ -113,7 +113,7 @@ class TestAttribsHelperAddAttributes(unittest.TestCase):
     """Test add method."""
 
     def setUp(self):
-        self.helper = AttribsHelper()
+        self.helper = AttributeHelper()
         # Use actual ods.ContextVariables
         self.attributes = ods.ContextVariables()
 
@@ -158,12 +158,7 @@ class TestAttribsHelperAddAttributes(unittest.TestCase):
 
     def test_add_multiple_attributes(self):
         """Test adding multiple attributes of different types."""
-        properties = {
-            "name": "test",
-            "value": 3.14,
-            "count": 42,
-            "enabled": True
-        }
+        properties = {"name": "test", "value": 3.14, "count": 42, "enabled": True}
         self.helper.add(self.attributes, properties)
 
         # Verify all were processed
@@ -232,11 +227,12 @@ class TestAttribsHelperAddAttributes(unittest.TestCase):
         self.assertNotIn("obsolete", self.attributes.variables)
         self.assertIn("val1", self.attributes.variables)
 
+
 class TestAttribsHelperNumpyDatetime64(unittest.TestCase):
     """Test numpy datetime64 support (without importing numpy)."""
 
     def setUp(self):
-        self.helper = AttribsHelper()
+        self.helper = AttributeHelper()
 
     def test_numpy_datetime64_like_object(self):
         """Test handling of numpy-like datetime64 objects."""
@@ -244,4 +240,3 @@ class TestAttribsHelperNumpyDatetime64(unittest.TestCase):
         # Actual numpy testing would require numpy to be installed
         # The logic is tested in TimeHelper.is_datetime_type and to_asam_ods_time
         pass
-

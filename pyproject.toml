@@ -47,7 +47,7 @@ dev = [
     "types-grpcio-health-checking>=1",
     "python-semantic-release>=10.5.3",
     "pre-commit>=3.0",
-    "numpy>=2.3,<3.0"
+    "types-protobuf>6.32,<7.0"
 ]
 lint = [
     "commitlint>=19.0",
@@ -107,7 +107,7 @@ ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = "ods_exd_api_box.proto.*"
-ignore_missing_imports = true
+ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = "ods_pb2"
