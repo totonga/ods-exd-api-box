@@ -16,6 +16,7 @@ __author__ = "totonga"
 # isort: skip_file
 from .proto import ods, exd_api, exd_grpc
 
+from .exceptions import NotMyFileError
 from .file_interface import ExdFileInterface
 from .file_handler_registry import FileHandlerRegistry
 from .external_data_reader import ExternalDataReader
@@ -30,5 +31,6 @@ __all__ = [
     "ExternalDataReader",
     "serve_plugin",
     "ExdFileInterface",
+    "NotMyFileError",
     "__version__",
 ]

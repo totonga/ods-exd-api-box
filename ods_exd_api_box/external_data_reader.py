@@ -14,7 +14,7 @@ from urllib.request import url2pathname
 
 import grpc
 
-from . import ExdFileInterface, FileHandlerRegistry, exd_api, exd_grpc
+from . import ExdFileInterface, FileHandlerRegistry, NotMyFileError, exd_api, exd_grpc
 
 # pylint: disable=invalid-name
 
@@ -38,15 +38,19 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
         """Open a connection to an external data file."""
         self.log.info("Open request for URL '%s'", request.url)
 
-        file_path = Path(self.__get_path(request.url))
+        file_path = Path(ExternalDataReader.__get_path(request.url))
         if not file_path.is_file():
             self.log.error("File not found: '%s' (resolved path: '%s')", request.url, file_path)
             context.abort(grpc.StatusCode.NOT_FOUND, f"File '{request.url}' not found.")
 
-        connection_id = self.__open_file(request)
-        self.log.info("Successfully opened file '%s' with connection ID '%s'", request.url, connection_id)
+        try:
+            connection_id = self.__open_file(request)
+            self.log.info("Successfully opened file '%s' with connection ID '%s'", request.url, connection_id)
 
-        return exd_api.Handle(uuid=connection_id)
+            return exd_api.Handle(uuid=connection_id)
+        except NotMyFileError:
+            context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Not my file!")
+            raise  # for type checker
 
     @override
     def Close(
@@ -84,10 +88,14 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
         rv.name = Path(identifier.url).name
         self.log.debug("Filling structure for file '%s'", rv.name)
 
-        file.fill_structure(rv)
-        self.log.debug("Structure filled successfully for handle '%s'", request.handle.uuid)
+        try:
+            file.fill_structure(rv)
+            self.log.debug("Structure filled successfully for handle '%s'", request.handle.uuid)
 
-        return rv
+            return rv
+        except NotMyFileError:
+            context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Not my file!")
+            raise  # for type checker
 
     @override
     def GetValues(self, request: exd_api.ValuesRequest, context: grpc.ServicerContext) -> exd_api.ValuesResult:
@@ -124,17 +132,19 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
         self.connection_map[rv] = identifier
         return rv
 
-    def __uri_to_path(self, uri: str) -> str:
+    @staticmethod
+    def __uri_to_path(uri: str) -> str:
         parsed = urlparse(uri)
         host = f"{os.path.sep}{os.path.sep}{parsed.netloc}{os.path.sep}"
         return os.path.normpath(os.path.join(host, url2pathname(unquote(parsed.path))))
 
-    def __get_path(self, file_url: str) -> str:
-        return self.__uri_to_path(file_url)
+    @staticmethod
+    def __get_path(file_url: str) -> str:
+        return ExternalDataReader.__uri_to_path(file_url)
 
     def __get_file_map_key(self, identifier: exd_api.Identifier) -> tuple[str, tuple[str, str | None]]:
         """Create a composite key from identifier URL and parameters, returning both URL and key."""
-        file_path = self.__get_path(identifier.url)
+        file_path = ExternalDataReader.__get_path(identifier.url)
         file_map_key = (file_path, identifier.parameters)
         return (file_path, file_map_key)
 

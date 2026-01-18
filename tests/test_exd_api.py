@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import logging
 import pathlib
+import tempfile
 import unittest
 
+import grpc
 from google.protobuf.json_format import MessageToJson
 
 from ods_exd_api_box import ExternalDataReader, FileHandlerRegistry, exd_api, ods
@@ -16,7 +18,7 @@ class TestExdApi(unittest.TestCase):
 
     def setUp(self):
         """Register ExternalDataFile handler before each test."""
-        FileHandlerRegistry.register(file_type_name="test", factory=ExternalDataFile)
+        FileHandlerRegistry.register(file_type_name="test", factory=ExternalDataFile.create)
 
     def _get_example_file_path(self, file_name: str) -> str:
         example_file_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent.resolve(), "data", file_name)
@@ -85,3 +87,33 @@ class TestExdApi(unittest.TestCase):
 
         finally:
             service.Close(handle, context)
+
+    def test_open_not_my_file_in_open(self):
+
+        service = ExternalDataReader()
+        context = MockServicerContext()
+        with tempfile.NamedTemporaryFile(mode="w", delete=True, suffix=".not_my_file") as tmp:
+
+            with self.assertRaises(grpc.RpcError) as _:
+                service.Open(
+                    exd_api.Identifier(url=pathlib.Path(tmp.name).absolute().resolve().as_uri(), parameters=""),
+                    context,
+                )
+            self.assertEqual(context.code(), grpc.StatusCode.FAILED_PRECONDITION)
+            self.assertEqual(context.details(), "Not my file!")
+
+    def test_open_not_my_file_in_get_structure(self):
+
+        service = ExternalDataReader()
+        context = MockServicerContext()
+        with tempfile.NamedTemporaryFile(mode="w", delete=True, suffix=".exd_api_test") as tmp:
+
+            handle: exd_api.Handle = service.Open(
+                exd_api.Identifier(url=pathlib.Path(tmp.name).absolute().resolve().as_uri(), parameters=""),
+                context,
+            )
+
+            with self.assertRaises(grpc.RpcError) as _:
+                service.GetStructure(exd_api.StructureRequest(handle=handle), context)
+            self.assertEqual(context.code(), grpc.StatusCode.FAILED_PRECONDITION)
+            self.assertEqual(context.details(), "Not my file!")
