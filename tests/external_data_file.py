@@ -17,13 +17,18 @@ class ExternalDataFile(ExdFileInterface):
     @override
     def create(cls, file_path: str, parameters: str) -> ExdFileInterface:
         """Factory method to create a file handler instance."""
+        if not file_path.endswith(".exd_api_test"):
+            from ods_exd_api_box.exceptions import NotMyFileError
+
+            raise NotMyFileError(f"File '{file_path}' is not handled by ExternalDataFile.")
+
         return cls(file_path, parameters)
 
     def __init__(self, file_path: str, parameters: str):
         """Initialize the external data file handler."""
         params = ParamParser.parse_params(parameters)
         params.get("example_param", "default_value")
-        pass
+        self.file_path = file_path
 
     @override
     def close(self):
@@ -33,6 +38,11 @@ class ExternalDataFile(ExdFileInterface):
     @override
     def fill_structure(self, structure: exd_api.StructureResult) -> None:
         """Fill the structure of the external data file."""
+
+        if "dummy.exd_api_test" not in self.file_path:
+            from ods_exd_api_box.exceptions import NotMyFileError
+
+            raise NotMyFileError(f"File '{self.file_path}' is not handled by ExternalDataFile.")
 
         AttributeHelper.add(properties={"name": "Raw Layer_00001"}, attributes=structure.attributes)
 
