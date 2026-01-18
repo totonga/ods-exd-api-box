@@ -8,6 +8,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import override
 from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
 
@@ -22,16 +23,17 @@ from . import ExdFileInterface, FileHandlerRegistry, exd_api, exd_grpc
 class FileMapEntry:
     """Entry in the file map."""
 
-    file: ExdFileInterface
+    file: ExdFileInterface | None
     ref_count: int = 0
     last_access_time: float = field(default_factory=time.time)
 
 
-class ExternalDataReader(exd_grpc.ExternalDataReader):
+class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
     """ASAM ODS EXD API implementation."""
 
     log = logging.getLogger(__name__)
 
+    @override
     def Open(self, request: exd_api.Identifier, context: grpc.ServicerContext) -> exd_api.Handle:
         """Open a connection to an external data file."""
         self.log.info("Open request for URL '%s'", request.url)
@@ -46,6 +48,7 @@ class ExternalDataReader(exd_grpc.ExternalDataReader):
 
         return exd_api.Handle(uuid=connection_id)
 
+    @override
     def Close(
         self, request: exd_api.Handle, context: grpc.ServicerContext  # pylint: disable=unused-argument
     ) -> exd_api.Empty:  # pylint: disable=unused-argument
@@ -56,6 +59,7 @@ class ExternalDataReader(exd_grpc.ExternalDataReader):
         self.log.info("Successfully closed connection '%s'", request.uuid)
         return exd_api.Empty()
 
+    @override
     def GetStructure(
         self, request: exd_api.StructureRequest, context: grpc.ServicerContext
     ) -> exd_api.StructureResult:
@@ -73,6 +77,7 @@ class ExternalDataReader(exd_grpc.ExternalDataReader):
             context.abort(grpc.StatusCode.UNIMPLEMENTED, "Method not implemented!")
 
         file, identifier = self.__get_file(request.handle)
+
         self.log.debug("Retrieved file handler for handle '%s'", request.handle.uuid)
 
         rv = exd_api.StructureResult(identifier=identifier)
@@ -84,6 +89,7 @@ class ExternalDataReader(exd_grpc.ExternalDataReader):
 
         return rv
 
+    @override
     def GetValues(self, request: exd_api.ValuesRequest, context: grpc.ServicerContext) -> exd_api.ValuesResult:
         """Get values from the external data file."""
         self.log.debug(
@@ -91,21 +97,20 @@ class ExternalDataReader(exd_grpc.ExternalDataReader):
         )
 
         file, _ = self.__get_file(request.handle)
-        if file is None:
-            self.log.error("File not found for handle '%s'", request.handle.uuid)
-            context.abort(grpc.StatusCode.NOT_FOUND, f"File for handle '{request.handle.uuid}' not found.")
 
         self.log.debug("Retrieving values for handle '%s'", request.handle.uuid)
         result = file.get_values(request)
         self.log.debug("Successfully retrieved values for handle '%s'", request.handle.uuid)
         return result
 
+    @override
     def GetValuesEx(self, request: exd_api.ValuesExRequest, context: grpc.ServicerContext) -> exd_api.ValuesExResult:
         """Get values from the external data file with extended options."""
 
         context.abort(
             grpc.StatusCode.UNIMPLEMENTED, f"Method not implemented! request. Names: {request.channel_names}"
         )
+        return exd_api.ValuesExResult()  # never reached
 
     def __init__(self) -> None:
         self.connect_count: int = 0
@@ -164,6 +169,9 @@ class ExternalDataReader(exd_grpc.ExternalDataReader):
             raise KeyError(f"Connection URL '{file_path}' not found.")
         entry.last_access_time = time.time()
         self.log.debug("Updated last_access_time for handle '%s' (file: '%s')", handle.uuid, file_path)
+        if entry.file is None:
+            self.log.error("File handler is None for handle '%s' (file: '%s')", handle.uuid, file_path)
+            raise KeyError(f"File handler is None for handle '{handle.uuid}'.")
         return entry.file, identifier
 
     def __close_file(self, handle: exd_api.Handle) -> None:
@@ -184,6 +192,8 @@ class ExternalDataReader(exd_grpc.ExternalDataReader):
                 self.log.debug("Decremented ref_count for '%s' to %s", file_path, entry.ref_count)
             else:
                 self.log.info("Closing file '%s' (ref_count reached 0)", file_path)
-                entry.file.close()
+                if entry.file is not None:
+                    entry.file.close()
+                    self.log.debug("File handler closed for '%s'", file_path)
                 self.file_map.pop(file_map_key)
                 self.log.debug("File removed from file_map: '%s'", file_path)

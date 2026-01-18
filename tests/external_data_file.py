@@ -7,6 +7,7 @@ from typing import override
 from google.protobuf.json_format import ParseDict
 
 from ods_exd_api_box import ExdFileInterface, exd_api
+from ods_exd_api_box.utils import AttributeHelper, ParamParser
 
 
 class ExternalDataFile(ExdFileInterface):
@@ -20,6 +21,8 @@ class ExternalDataFile(ExdFileInterface):
 
     def __init__(self, file_path: str, parameters: str):
         """Initialize the external data file handler."""
+        params = ParamParser.parse_params(parameters)
+        params.get("example_param", "default_value")
         pass
 
     @override
@@ -30,6 +33,8 @@ class ExternalDataFile(ExdFileInterface):
     @override
     def fill_structure(self, structure: exd_api.StructureResult) -> None:
         """Fill the structure of the external data file."""
+
+        AttributeHelper.add(properties={"name": "Raw Layer_00001"}, attributes=structure.attributes)
 
         hardcoded = exd_api.StructureResult()
         ParseDict(
