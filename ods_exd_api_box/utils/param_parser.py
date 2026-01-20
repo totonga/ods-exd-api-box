@@ -4,19 +4,21 @@ To simply parse parameters from a string into a dictionary.
 
 import base64
 import json
+import re
 
 
 class ParamParser:
 
     @staticmethod
     def parse_params(parameters: str | None) -> dict[str, object]:
-        """Parse a parameter string into a dictionary.
+        r"""Parse a parameter string into a dictionary.
 
         Args:
             parameters: A string of parameters in one of these formats:
                        - Base64: "B64:..." where ... is base64-encoded JSON or key=value string
                        - JSON: "{\"key1\": \"value1\", \"key2\": \"value2\"}"
                        - Semicolon-separated: "key1=value1;key2=value2"
+                         (Use \uXXXX to include Unicode characters, e.g., \u003B for ;)
                        - None or empty string returns empty dict
 
         Returns:
@@ -70,5 +72,29 @@ class ParamParser:
                 value = value.strip()
                 if not key:
                     raise ValueError("Parameter key cannot be empty")
+                # Decode Unicode escapes in the value
+                value = ParamParser._decode_unicode_escapes(value)
                 param_dict[key] = value
         return param_dict
+
+    @staticmethod
+    def _decode_unicode_escapes(text: str) -> str:
+        """Decode \\uXXXX Unicode escape sequences to their characters.
+
+        Args:
+            text: A string that may contain \\uXXXX escape sequences
+
+        Returns:
+            The string with all \\uXXXX sequences replaced by their Unicode characters
+        """
+
+        def replace_unicode(match: re.Match[str]) -> str:
+            hex_str: str = match.group(1)
+            try:
+                code_point = int(hex_str, 16)
+                return chr(code_point)
+            except (ValueError, OverflowError):
+                # If conversion fails, return the original string
+                return match.group(0)
+
+        return re.sub(r"\\u([0-9a-fA-F]{4})", replace_unicode, text)

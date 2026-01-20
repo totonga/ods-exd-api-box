@@ -1,6 +1,8 @@
 """Comprehensive tests for ParamParser class."""
+
 import base64
 import unittest
+
 from ods_exd_api_box.utils import ParamParser
 
 
@@ -104,7 +106,7 @@ class TestParamParserJSON(unittest.TestCase):
     def test_invalid_json_missing_quotes(self):
         """Test invalid JSON with missing quotes."""
         with self.assertRaisesRegex(ValueError, "Invalid JSON format"):
-            ParamParser.parse_params('{key: value}')
+            ParamParser.parse_params("{key: value}")
 
 
 class TestParamParserBase64(unittest.TestCase):
@@ -114,28 +116,28 @@ class TestParamParserBase64(unittest.TestCase):
         """Test parsing base64-encoded semicolon-separated values."""
         # Encode "key1=value1;key2=value2"
         original = "key1=value1;key2=value2"
-        encoded = base64.b64encode(original.encode('utf-8')).decode('utf-8')
+        encoded = base64.b64encode(original.encode("utf-8")).decode("utf-8")
         result = ParamParser.parse_params(f"B64:{encoded}")
         self.assertEqual(result, {"key1": "value1", "key2": "value2"})
 
     def test_base64_encoded_json(self):
         """Test parsing base64-encoded JSON."""
         original = '{"key1": "value1", "key2": "value2"}'
-        encoded = base64.b64encode(original.encode('utf-8')).decode('utf-8')
+        encoded = base64.b64encode(original.encode("utf-8")).decode("utf-8")
         result = ParamParser.parse_params(f"B64:{encoded}")
         self.assertEqual(result, {"key1": "value1", "key2": "value2"})
 
     def test_base64_with_padding(self):
         """Test parsing base64 with padding."""
         original = "key=value"
-        encoded = base64.b64encode(original.encode('utf-8')).decode('utf-8')
+        encoded = base64.b64encode(original.encode("utf-8")).decode("utf-8")
         result = ParamParser.parse_params(f"B64:{encoded}")
         self.assertEqual(result, {"key": "value"})
 
     def test_base64_with_whitespace(self):
         """Test base64 with leading/trailing whitespace."""
         original = "key1=value1;key2=value2"
-        encoded = base64.b64encode(original.encode('utf-8')).decode('utf-8')
+        encoded = base64.b64encode(original.encode("utf-8")).decode("utf-8")
         encoded_with_space = f"  B64:{encoded}  "
         result = ParamParser.parse_params(encoded_with_space)
         self.assertEqual(result, {"key1": "value1", "key2": "value2"})
@@ -197,7 +199,7 @@ class TestParamParserEdgeCases(unittest.TestCase):
     def test_base64_with_unicode(self):
         """Test base64 encoding of Unicode."""
         original = "greeting=Hello世界"
-        encoded = base64.b64encode(original.encode('utf-8')).decode()
+        encoded = base64.b64encode(original.encode("utf-8")).decode()
         result = ParamParser.parse_params(f"B64:{encoded}")
         self.assertEqual(result, {"greeting": "Hello世界"})
 
@@ -229,3 +231,81 @@ class TestParamParserEdgeCases(unittest.TestCase):
         """Test multiple equals signs in value."""
         result = ParamParser.parse_params("formula=a=b+c=d")
         self.assertEqual(result, {"formula": "a=b+c=d"})
+
+
+class TestParamParserUnicodeEscapes(unittest.TestCase):
+    """Test Unicode escape sequences using \\uXXXX syntax."""
+
+    def test_unicode_escape_semicolon(self):
+        """Test parsing value with Unicode-escaped semicolon (\\u003B)."""
+        result = ParamParser.parse_params("message=hello\\u003Bworld")
+        self.assertEqual(result, {"message": "hello;world"})
+
+    def test_multiple_unicode_escapes_in_single_value(self):
+        """Test multiple Unicode escape sequences in one value."""
+        result = ParamParser.parse_params("text=a\\u003Bb\\u003Bc\\u003Bd")
+        self.assertEqual(result, {"text": "a;b;c;d"})
+
+    def test_unicode_escape_with_multiple_pairs(self):
+        """Test Unicode escapes alongside multiple key=value pairs."""
+        result = ParamParser.parse_params("key1=val\\u003B1;key2=val2;key3=val\\u003B3")
+        self.assertEqual(result, {"key1": "val;1", "key2": "val2", "key3": "val;3"})
+
+    def test_unicode_escape_at_start_of_value(self):
+        """Test Unicode escape at the beginning of a value."""
+        result = ParamParser.parse_params("key=\\u003Bsemicolon")
+        self.assertEqual(result, {"key": ";semicolon"})
+
+    def test_unicode_escape_at_end_of_value(self):
+        """Test Unicode escape at the end of a value."""
+        result = ParamParser.parse_params("key=semicolon\\u003B")
+        self.assertEqual(result, {"key": "semicolon;"})
+
+    def test_unicode_escape_with_whitespace(self):
+        """Test Unicode escapes with whitespace handling."""
+        result = ParamParser.parse_params("key = value\\u003Bwith\\u003Bsemicolon")
+        self.assertEqual(result, {"key": "value;with;semicolon"})
+
+    def test_unicode_escape_in_json_like_value(self):
+        """Test Unicode escapes in JSON-like structure (still parsed as semicolon format)."""
+        result = ParamParser.parse_params("key={\\u003Bjson\\u003Blike\\u003Bvalue\\u003B}")
+        self.assertEqual(result, {"key": "{;json;like;value;}"})
+
+    def test_unicode_escape_with_url(self):
+        """Test Unicode escapes with URL parameters."""
+        result = ParamParser.parse_params("url=http://example.com?param1=value1\\u003Bparam2=value2")
+        self.assertEqual(result, {"url": "http://example.com?param1=value1;param2=value2"})
+
+    def test_unicode_escape_complex_case(self):
+        """Test complex case with multiple pairs and Unicode escapes."""
+        result = ParamParser.parse_params("path=/a/b\\u003Bc;query=a=1\\u003Bb=2;name=test")
+        self.assertEqual(result, {"path": "/a/b;c", "query": "a=1;b=2", "name": "test"})
+
+    def test_unicode_escape_various_characters(self):
+        """Test Unicode escapes for various characters."""
+        result = ParamParser.parse_params("key=space\\u0020tab\\u0009newline\\u000A")
+        self.assertEqual(result, {"key": "space tab\tnewline\n"})
+
+    def test_unicode_escape_in_base64(self):
+        """Test Unicode escapes work when using base64 encoding."""
+        original = "message=hello\\u003Bworld;name=test"
+        encoded = base64.b64encode(original.encode("utf-8")).decode("utf-8")
+        result = ParamParser.parse_params(f"B64:{encoded}")
+        self.assertEqual(result, {"message": "hello;world", "name": "test"})
+
+    def test_invalid_unicode_escape_preserved(self):
+        """Test that invalid Unicode escapes are preserved as-is."""
+        result = ParamParser.parse_params("key=value\\uXXXX")
+        self.assertEqual(result, {"key": "value\\uXXXX"})
+
+    def test_partial_unicode_escape_preserved(self):
+        """Test that partial Unicode escapes are preserved."""
+        result = ParamParser.parse_params("key=value\\u00")
+        self.assertEqual(result, {"key": "value\\u00"})
+
+    def test_single_semicolon_still_separates(self):
+        """Test that single semicolon still acts as separator."""
+        result = ParamParser.parse_params("key1=value1;key2=value2")
+        self.assertEqual(result, {"key1": "value1", "key2": "value2"})
+        # Verify it's not one key with a value containing semicolon
+        self.assertEqual(len(result), 2)
