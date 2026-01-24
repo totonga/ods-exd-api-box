@@ -1,0 +1,12 @@
+FROM python:3.12-slim
+WORKDIR /app
+# Create a non-root user and change ownership of /app
+RUN useradd -ms /bin/bash appuser && chown -R appuser /app
+# Copy source code first (needed for pip install)
+COPY pyproject.toml .
+# Install required packages
+RUN pip3 install --upgrade pip && pip3 install .
+COPY file_simple_example.py ./
+USER appuser
+# Start server
+CMD ["python3", "file_simple_example.py"]
