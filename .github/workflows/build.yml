@@ -41,7 +41,7 @@ jobs:
 
     - name: Install package with dev dependencies
       run: |
-        pip install -e '.[dev]'
+        pip install -e '.[simple,dev]'
 
     - name: Run tests
       run: |

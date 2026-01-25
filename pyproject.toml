@@ -49,6 +49,9 @@ dev = [
     "pre-commit>=3.0",
     "types-protobuf>6.32,<7.0"
 ]
+simple = [
+    "pandas>=2.0.0,<3.0.0",
+]
 lint = [
     "commitlint>=19.0",
 ]
