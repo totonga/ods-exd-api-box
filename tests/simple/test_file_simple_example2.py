@@ -6,17 +6,17 @@ from ods_exd_api_box import ExternalDataReader, FileHandlerRegistry, exd_api, od
 from ods_exd_api_box.simple.file_simple import FileSimple, FileSimpleRegistry
 from tests.mock_servicer_context import MockServicerContext
 
-from .file_simple_example import FileSimpleExample
+from .file_simple_example2 import FileSimpleExample2
 
 # pylint: disable=no-member
 
 
-class TestExdApi(unittest.TestCase):
+class TestFileSimpleExample2(unittest.TestCase):
     log = logging.getLogger(__name__)
 
     def setUp(self):
         """Register ExternalDataFile handler before each test."""
-        FileSimpleRegistry.register(FileSimpleExample.create)
+        FileSimpleRegistry.register(FileSimpleExample2.create)
         FileHandlerRegistry.register(file_type_name="test", factory=FileSimple.create)
         self.context = MockServicerContext()
 
@@ -70,6 +70,50 @@ class TestExdApi(unittest.TestCase):
             self.assertEqual(channels[12].data_type, ods.DataTypeEnum.DT_COMPLEX)
             self.assertEqual(channels[13].name, "dcomplex_col")
             self.assertEqual(channels[13].data_type, ods.DataTypeEnum.DT_DCOMPLEX)
+
+            self.assertEqual(channels[0].unit_string, "m")
+            self.assertEqual(len(channels[0].attributes.variables), 2)
+            self.assertEqual(channels[0].attributes.variables["independent"].long_array.values[0], 1)
+            self.assertEqual(channels[0].attributes.variables["description"].string_array.values[0], "Byte column")
+            self.assertEqual(channels[1].unit_string, "kg")
+            self.assertEqual(len(channels[1].attributes.variables), 1)
+            self.assertEqual(
+                channels[1].attributes.variables["description"].string_array.values[0], "Short int8 column"
+            )
+            self.assertEqual(channels[3].unit_string, "A")
+            self.assertEqual(len(channels[3].attributes.variables), 1)
+            self.assertEqual(
+                channels[3].attributes.variables["description"].string_array.values[0], "Long uint16 column"
+            )
+            self.assertEqual(channels[5].unit_string, "mol")
+            self.assertEqual(len(channels[5].attributes.variables), 1)
+            self.assertEqual(
+                channels[5].attributes.variables["description"].string_array.values[0], "Long long uint32 column"
+            )
+            self.assertEqual(channels[8].unit_string, "")
+            self.assertEqual(len(channels[8].attributes.variables), 1)
+            self.assertEqual(channels[8].attributes.variables["description"].string_array.values[0], "Float column")
+            self.assertEqual(channels[10].unit_string, "")
+            self.assertEqual(len(channels[10].attributes.variables), 1)
+            self.assertEqual(channels[10].attributes.variables["description"].string_array.values[0], "String column")
+
+            self.assertEqual(len(structure.attributes.variables), 2)
+            self.assertEqual(structure.attributes.variables["file_type"].string_array.values[0], "TEST_SIMPLE")
+            self.assertEqual(
+                structure.attributes.variables["description"].string_array.values[0],
+                "This is a test simple file with various data types.",
+            )
+            self.assertEqual(len(structure.groups[0].attributes.variables), 3)
+            self.assertEqual(
+                structure.groups[0].attributes.variables["group_name"].string_array.values[0], "TestGroup"
+            )
+            self.assertEqual(
+                structure.groups[0].attributes.variables["description"].string_array.values[0],
+                "This group contains test data.",
+            )
+            self.assertEqual(
+                structure.groups[0].attributes.variables["created_by"].string_array.values[0], "FileSimpleExample"
+            )
         finally:
             service.Close(handle, self.context)
 
