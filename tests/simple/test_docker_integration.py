@@ -88,7 +88,7 @@ class TestDockerContainer(unittest.TestCase):
         with grpc.insecure_channel("localhost:50051") as channel:
             service = exd_grpc.ExternalDataReaderStub(channel)
 
-            handle = service.Open(exd_api.Identifier(url="/data/example.csv", parameters=""), None)
+            handle = service.Open(exd_api.Identifier(url="/data/dummy.exd_api_test", parameters=""), None)
             try:
                 structure = service.GetStructure(exd_api.StructureRequest(handle=handle), None)
 
@@ -127,7 +127,7 @@ class TestDockerContainer(unittest.TestCase):
         with grpc.insecure_channel("localhost:50051") as channel:
             service = exd_grpc.ExternalDataReaderStub(channel)
 
-            handle = service.Open(exd_api.Identifier(url="/data/example.csv", parameters=""), None)
+            handle = service.Open(exd_api.Identifier(url="/data/dummy.exd_api_test", parameters=""), None)
 
             try:
                 values = service.GetValues(
