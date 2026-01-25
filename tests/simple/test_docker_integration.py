@@ -86,6 +86,7 @@ class TestDockerContainer(unittest.TestCase):
 
     def test_structure(self):
         with grpc.insecure_channel("localhost:50051") as channel:
+            grpc.channel_ready_future(channel).result(timeout=5)
             service = exd_grpc.ExternalDataReaderStub(channel)
 
             handle = service.Open(exd_api.Identifier(url="/data/dummy.exd_api_test", parameters=""), None)
@@ -125,6 +126,7 @@ class TestDockerContainer(unittest.TestCase):
 
     def test_get_values(self):
         with grpc.insecure_channel("localhost:50051") as channel:
+            grpc.channel_ready_future(channel).result(timeout=5)
             service = exd_grpc.ExternalDataReaderStub(channel)
 
             handle = service.Open(exd_api.Identifier(url="/data/dummy.exd_api_test", parameters=""), None)
