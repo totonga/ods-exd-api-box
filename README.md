@@ -53,19 +53,31 @@ python external_data_file.py --help
 
 Key configuration options:
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--port` | 50051 | gRPC server port |
-| `--bind-address` | `[::]` | Server bind address |
-| `--max-workers` | CPU count × 2 | Thread pool size |
-| `--max-concurrent-streams` | None | Max concurrent gRPC streams |
-| `--use-tls` | False | Enable TLS/SSL |
-| `--tls-cert-file` | - | Path to server certificate (PEM) |
-| `--tls-key-file` | - | Path to server private key (PEM) |
-| `--tls-client-ca-file` | - | CA bundle for client verification |
-| `--require-client-cert` | False | Require valid client certificate |
-| `--verbose` | False | Enable debug logging |
-| `--health-check-enabled` | False | Enable health check service |
+| Option | Env Variable | Default | Description |
+|--------|--------------|---------|-------------|
+| `--port` | `ODS_EXD_API_PORT` | `50051` | Port to run gRPC server on |
+| `--verbose` | `ODS_EXD_API_VERBOSE` | `False` | Enable debug logging |
+| `--bind-address` | `ODS_EXD_API_BIND_ADDRESS` | `[::]` | Address to bind gRPC server to |
+| `--max-workers` | `ODS_EXD_API_MAX_WORKERS` | `2 × CPU count` | Maximum number of worker threads |
+| `--max-concurrent-streams` | `ODS_EXD_API_MAX_CONCURRENT_STREAMS` | `None` | Maximum concurrent gRPC streams |
+| `--max-send-message-length` | `ODS_EXD_API_MAX_SEND_MESSAGE_LENGTH` | `512` | Max send message length (MB) |
+| `--max-receive-message-length` | `ODS_EXD_API_MAX_RECEIVE_MESSAGE_LENGTH` | `32` | Max receive message length (MB) |
+| `--use-tls` | `ODS_EXD_API_USE_TLS` | `False` | Enable TLS/SSL |
+| `--tls-cert-file` | `ODS_EXD_API_TLS_CERT_FILE` | `None` | Path to server certificate (PEM) |
+| `--tls-key-file` | `ODS_EXD_API_TLS_KEY_FILE` | `None` | Path to server private key (PEM) |
+| `--tls-client-ca-file` | `ODS_EXD_API_TLS_CLIENT_CA_FILE` | `None` | CA bundle for client verification |
+| `--require-client-cert` | `ODS_EXD_API_REQUIRE_CLIENT_CERT` | `False` | Require valid client certificate |
+| `--health-check-enabled` | `ODS_EXD_API_HEALTH_CHECK_ENABLED` | `False` | Enable health check service |
+| `--health-check-bind-address` | `ODS_EXD_API_HEALTH_CHECK_BIND_ADDRESS` | `[::]` | Health check service bind address |
+| `--health-check-port` | `ODS_EXD_API_HEALTH_CHECK_PORT` | `50052` | Health check service port |
+| `--env-prefix` | - | `ODS_EXD_API_` | Environment variable prefix for multi-instance deployments |
+
+#### Configuration Priority
+
+Values are resolved in this order (highest to lowest priority):
+1. Command line arguments
+2. Environment variables
+3. Default values
 
 ### TLS Configuration
 

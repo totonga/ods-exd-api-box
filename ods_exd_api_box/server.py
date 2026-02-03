@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import logging
 import multiprocessing
 from concurrent import futures
@@ -14,6 +13,7 @@ import grpc
 from grpc_health.v1 import health, health_pb2, health_pb2_grpc
 
 from . import ExdFileInterface, ExternalDataReader, FileHandlerRegistry, exd_grpc
+from .utils.env_argument_parser import EnvArgumentParser
 
 
 @dataclass(frozen=True)
@@ -35,47 +35,47 @@ class ServerConfig:
 
 
 def _get_server_config() -> ServerConfig:
-    parser = argparse.ArgumentParser(description="ASAM ODS EXD-API gRPC Server")
-    parser.add_argument("--bind-address", type=str, help="Address to bind gRPC server to", default="[::]")
-    parser.add_argument("--port", type=int, help="Port to run gRPC server on", default=50051)
-    parser.add_argument(
+    parser = EnvArgumentParser(description="ASAM ODS EXD-API gRPC Server")
+    parser.add_env_argument("--bind-address", type=str, help="Address to bind gRPC server to.", default="[::]")
+    parser.add_env_argument("--port", type=int, help="Port to run gRPC server on.", default=50051)
+    parser.add_env_argument(
         "--max-workers",
         type=int,
-        help="Maximum number of worker threads for the gRPC server",
+        help="Maximum number of worker threads for the gRPC server.",
         default=2 * multiprocessing.cpu_count(),
     )
-    parser.add_argument(
-        "--max-concurrent-streams", type=int, help="Maximum amount of concurrent gRPC streams", default=None
+    parser.add_env_argument(
+        "--max-concurrent-streams", type=int, help="Maximum amount of concurrent gRPC streams.", default=None
     )
-    parser.add_argument(
-        "--max-send-message-length", type=int, help="Maximum send message length in MBytes", default=512
+    parser.add_env_argument(
+        "--max-send-message-length", type=int, help="Maximum send message length in MBytes.", default=512
     )
-    parser.add_argument(
-        "--max-receive-message-length", type=int, help="Maximum receive message length in MBytes", default=32
+    parser.add_env_argument(
+        "--max-receive-message-length", type=int, help="Maximum receive message length in MBytes.", default=32
     )
-    parser.add_argument(
-        "--use-tls", action="store_true", help="Serve over TLS/SSL using the provided cert and key"
+    parser.add_env_argument(
+        "--use-tls", action="store_true", help="Serve over TLS/SSL using the provided cert and key."
     )
-    parser.add_argument("--tls-cert-file", type=Path, help="Path to the PEM encoded server certificate")
-    parser.add_argument("--tls-key-file", type=Path, help="Path to the PEM encoded server private key")
-    parser.add_argument(
-        "--tls-client-ca-file", type=Path, help="CA bundle that is used to validate client certificates"
+    parser.add_env_argument("--tls-cert-file", type=Path, help="Path to the PEM encoded server certificate.")
+    parser.add_env_argument("--tls-key-file", type=Path, help="Path to the PEM encoded server private key.")
+    parser.add_env_argument(
+        "--tls-client-ca-file", type=Path, help="CA bundle that is used to validate client certificates."
     )
-    parser.add_argument(
-        "--require-client-cert", action="store_true", help="Require a client certificate if TLS is enabled"
+    parser.add_env_argument(
+        "--require-client-cert", action="store_true", help="Require a client certificate if TLS is enabled."
     )
-    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging (DEBUG level)")
-    parser.add_argument(
-        "--health-check-enabled", action="store_true", help="Enable insecure health check service"
+    parser.add_env_argument("--verbose", action="store_true", help="Enable verbose logging (DEBUG level).")
+    parser.add_env_argument(
+        "--health-check-enabled", action="store_true", help="Enable insecure health check service."
     )
-    parser.add_argument(
+    parser.add_env_argument(
         "--health-check-bind-address",
         type=str,
-        help="Address to bind health check service to",
+        help="Address to bind health check service to.",
         default="[::]",
     )
-    parser.add_argument(
-        "--health-check-port", type=int, help="Port to run insecure health check service on", default=50052
+    parser.add_env_argument(
+        "--health-check-port", type=int, help="Port to run insecure health check service on.", default=50052
     )
 
     args = parser.parse_args()
@@ -185,6 +185,9 @@ def serve(server_config: ServerConfig | None = None):
     """Starts the gRPC server and listens for incoming requests."""
 
     config = server_config if server_config is not None else _get_server_config()
+    if logging.getLogger().isEnabledFor(logging.DEBUG):
+        logging.debug("Server configuration: %s", config)
+
     address = f"{config.bind_address}:{config.port}"
     logging.info(
         "Starting ASAM ODS EXD API gRPC server at %s with max workers %s...",
@@ -230,21 +233,21 @@ def serve_plugin(
     file_type_name: str,
     file_type_factory: Callable[[str, str], ExdFileInterface],
     file_type_file_patterns: list[str] | None = None,
+    server_config: ServerConfig | None = None,
 ):
     """Starts the gRPC server for a specific external data file type plugin.
 
     Args:
         file_type_name: File type identifier (e.g., 'tdms')
-        file_patterns: List of file extension patterns (e.g., ['*.tdms'])
-        factory: Callable that creates ExternalDataFileInterface instances
+        file_type_factory: Callable that creates ExternalDataFileInterface instances
+        file_type_file_patterns: List of file extension patterns (e.g., ['*.tdms'])
+        server_config: Optional server configuration (if None, parsed from args)
     """
-    config = _get_server_config()
+    server_config = server_config if server_config is not None else _get_server_config()
 
-    logging.info(
-        "Registering plugin for file type '%s' with patterns %s", file_type_name, file_type_file_patterns
-    )
+    logging.info("Registering plugin for file type '%s' with patterns %s", file_type_name, file_type_file_patterns)
     FileHandlerRegistry.register(
         file_type_name=file_type_name, file_patterns=file_type_file_patterns, factory=file_type_factory
     )
     logging.info("Starting gRPC server for plugin '%s'", file_type_name)
-    serve(server_config=config)
+    serve(server_config=server_config)

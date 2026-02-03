@@ -23,6 +23,7 @@
         "isort",
         "issubdtype",
         "jupyterlab",
+        "msecs",
         "mypy",
         "nptdms",
         "protoc",
