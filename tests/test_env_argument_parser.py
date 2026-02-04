@@ -317,7 +317,7 @@ class TestEnvArgumentParserNaming(unittest.TestCase):
 
 
 class TestEnvPrefixOption(unittest.TestCase):
-    """Test --env_prefix command line option."""
+    """Test --env-prefix command line option."""
 
     def setUp(self):
         """Set up test environment."""
@@ -332,35 +332,35 @@ class TestEnvPrefixOption(unittest.TestCase):
         os.environ.update(self.env_backup)
 
     def test_env_prefix_changes_lookup(self):
-        """Test that --env_prefix changes environment variable lookup."""
+        """Test that --env-prefix changes environment variable lookup."""
         os.environ["ALT_FOO"] = "alt_value"
         os.environ["ODS_EXD_API_FOO"] = "default_value"
-        args_list = ["--env_prefix", "ALT_"]
+        args_list = ["--env-prefix", "ALT_"]
         parser = EnvArgumentParser(args_list)
         parser.add_env_argument("--foo", type=str)
         args = parser.parse_args(args_list)
         self.assertEqual(args.foo, "alt_value")
 
     def test_env_prefix_with_equals(self):
-        """Test --env_prefix=VALUE syntax."""
+        """Test --env-prefix=VALUE syntax."""
         os.environ["ALT_FOO"] = "alt_value"
-        args_list = ["--env_prefix=ALT_"]
+        args_list = ["--env-prefix=ALT_"]
         parser = EnvArgumentParser(args_list)
         parser.add_env_argument("--foo", type=str)
         args = parser.parse_args(args_list)
         self.assertEqual(args.foo, "alt_value")
 
     def test_env_prefix_empty_string(self):
-        """Test --env_prefix with empty string."""
+        """Test --env-prefix with empty string."""
         os.environ["FOO"] = "value"
-        args_list = ["--env_prefix", ""]
+        args_list = ["--env-prefix", ""]
         parser = EnvArgumentParser(args_list)
         parser.add_env_argument("--foo", type=str)
         args = parser.parse_args(args_list)
         self.assertEqual(args.foo, "value")
 
     def test_env_prefix_not_from_env_var(self):
-        """Test that --env_prefix cannot be set via environment variable."""
+        """Test that --env-prefix cannot be set via environment variable."""
         os.environ["ODS_EXD_API_ENV_PREFIX"] = "ALT_"
         os.environ["ODS_EXD_API_FOO"] = "default_value"
         parser = EnvArgumentParser()
@@ -370,10 +370,10 @@ class TestEnvPrefixOption(unittest.TestCase):
         self.assertEqual(args.foo, "default_value")
 
     def test_env_prefix_with_multiple_args(self):
-        """Test --env_prefix with multiple arguments."""
+        """Test --env-prefix with multiple arguments."""
         os.environ["ALT_FOO"] = "foo_value"
         os.environ["ALT_BAR"] = "bar_value"
-        args = ["--env_prefix", "ALT_"]
+        args = ["--env-prefix", "ALT_"]
         parser = EnvArgumentParser(args)
         parser.add_env_argument("--foo", type=str)
         parser.add_env_argument("--bar", type=str)
@@ -386,7 +386,7 @@ class TestEnvPrefixOption(unittest.TestCase):
         os.environ["ALT_FOO"] = "env_value"
         parser = EnvArgumentParser()
         parser.add_env_argument("--foo", type=str)
-        args = parser.parse_args(["--env_prefix", "ALT_", "--foo", "cmdline_value"])
+        args = parser.parse_args(["--env-prefix", "ALT_", "--foo", "cmdline_value"])
         self.assertEqual(args.foo, "cmdline_value")
 
 
@@ -553,21 +553,21 @@ class TestEnvArgumentParserEdgeCases(unittest.TestCase):
         self.assertEqual(args.foo, "value")
 
     def test_env_prefix_position_in_args(self):
-        """Test --env_prefix can appear anywhere in arguments."""
+        """Test --env-prefix can appear anywhere in arguments."""
         os.environ["ALT_FOO"] = "alt_value"
         parser = EnvArgumentParser()
         parser.add_env_argument("--foo", type=str)
         parser.add_env_argument("--bar", type=str, default="default")
 
         # Can only be changed in global args, not in individual parse_args calls
-        args = parser.parse_args(["--bar", "custom", "--env_prefix", "ALT_"])
+        args = parser.parse_args(["--bar", "custom", "--env-prefix", "ALT_"])
         self.assertIsNone(args.foo)
         self.assertEqual(args.bar, "custom")
 
     def test_env_prefix_position_in_args_global(self):
-        """Test --env_prefix can appear anywhere in arguments."""
+        """Test --env-prefix can appear anywhere in arguments."""
         os.environ["ALT_FOO"] = "alt_value"
-        parser = EnvArgumentParser(["--env_prefix", "ALT_"])
+        parser = EnvArgumentParser(["--env-prefix", "ALT_"])
         parser.add_env_argument("--foo", type=str)
         parser.add_env_argument("--bar", type=str, default="default")
 

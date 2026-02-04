@@ -47,12 +47,12 @@ class EnvArgumentParser(argparse.ArgumentParser):
             args = sys.argv[1:]
 
         dummy_parser = argparse.ArgumentParser(add_help=False)
-        dummy_parser.add_argument("--env_prefix", type=str, default=env_prefix)
+        dummy_parser.add_argument("--env-prefix", type=str, default=env_prefix)
         parser_args, _ = dummy_parser.parse_known_args(args)
         self._env_prefix = parser_args.env_prefix
         super().__init__(**kwargs)
         super().add_argument(
-            "--env_prefix",
+            "--env-prefix",
             type=str,
             help="Environment variable prefix",
             default=self._env_prefix,
