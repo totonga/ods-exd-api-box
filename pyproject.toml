@@ -53,7 +53,7 @@ simple = [
     "pandas>=2.0.0,<3.0.0",
 ]
 lint = [
-    "commitlint>=19.0",
+    "commitlint>=1.13.3,<2.0.0",
 ]
 
 [project.urls]
