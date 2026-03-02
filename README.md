@@ -70,6 +70,8 @@ Key configuration options:
 | `--health-check-enabled` | `ODS_EXD_API_HEALTH_CHECK_ENABLED` | `False` | Enable health check service |
 | `--health-check-bind-address` | `ODS_EXD_API_HEALTH_CHECK_BIND_ADDRESS` | `[::]` | Health check service bind address |
 | `--health-check-port` | `ODS_EXD_API_HEALTH_CHECK_PORT` | `50052` | Health check service port |
+| `--auto-close-interval` | `ODS_EXD_API_AUTO_CLOSE_INTERVAL` | `0` | Interval in seconds for auto-close scheduler (0 disables) |
+| `--auto-close-idle` | `ODS_EXD_API_AUTO_CLOSE_IDLE` | `900` | Idle timeout in seconds before files are auto-closed |
 | `--env-prefix` | - | `ODS_EXD_API_` | Environment variable prefix for multi-instance deployments |
 
 #### Configuration Priority
