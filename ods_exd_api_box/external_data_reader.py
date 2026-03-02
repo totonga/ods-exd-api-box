@@ -158,7 +158,9 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
                 self.file_map[file_map_key] = FileMapEntry(file=file_handle, ref_count=0)
                 self.log.debug("File handler created and added to file_map")
             else:
-                self.log.debug("File '%s' already in file_map, reusing existing handler", file_path)
+                self.log.debug(
+                    "File '%s' already in file_map, reusing existing handler for connection id '%s'",
+                    file_path, connection_id)
             self.file_map[file_map_key].ref_count += 1
             self.log.debug(
                 "Incremented ref_count for '%s' to %s",
