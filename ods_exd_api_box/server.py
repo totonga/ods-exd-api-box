@@ -89,7 +89,7 @@ def _get_server_config() -> ServerConfig:
         "--auto-close-idle",
         type=int,
         help="Idle timeout in seconds before auto-closing files.",
-        default=300,
+        default=900,
     )
 
     args = parser.parse_args()

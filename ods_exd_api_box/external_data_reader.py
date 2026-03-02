@@ -27,6 +27,10 @@ class FileMapEntry:
     ref_count: int = 0
     last_access_time: float = field(default_factory=time.time)
 
+    def update_access_time(self) -> None:
+        """Update the last access time to the current time."""
+        self.last_access_time = time.time()
+
 
 class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
     """ASAM ODS EXD API implementation."""
@@ -120,16 +124,20 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
         )
         return exd_api.ValuesExResult()  # never reached
 
-    def __init__(self, auto_close_interval: int = 0, auto_close_idle: int = 300) -> None:
+    def __init__(self, auto_close_interval: int = 0, auto_close_idle: int = 900) -> None:
         self.connect_count: int = 0
         self.connection_map: dict[str, exd_api.Identifier] = {}
         self.file_map: dict[tuple[str, str | None], FileMapEntry] = {}
         self.lock: threading.Lock = threading.Lock()
         self.auto_close_interval: int = auto_close_interval
         self.auto_close_idle: int = auto_close_idle
-        self._stop_event = threading.Event()
+        ###### Auto-close scheduler member ######
         self._auto_close_thread: threading.Thread | None = None
+        self._stop_event: threading.Event | None = None
+
+        # only create stop event when scheduler is active
         if auto_close_interval > 0:
+            self._stop_event = threading.Event()
             self._auto_close_thread = threading.Thread(target=self._auto_close_loop, daemon=True)
             self._auto_close_thread.start()
             self.log.info(
@@ -193,7 +201,7 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
         if entry is None:
             self.log.error("Connection URL '%s' not found in file_map for handle '%s'", file_path, handle.uuid)
             raise KeyError(f"Connection URL '{file_path}' not found.")
-        entry.last_access_time = time.time()
+        entry.update_access_time()
         self.log.debug("Updated last_access_time for handle '%s' (file: '%s')", handle.uuid, file_path)
         if entry.file is None:
             self.log.error("File handler is None for handle '%s' (file: '%s')", handle.uuid, file_path)
@@ -230,6 +238,7 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
         This method is thread-safe (acquires self.lock) and logs all cleanup operations.
         Cleanup is based solely on last_access_time, not ref_count.
         """
+        self.log.info("Pruning idle files from file_map (idle timeout: %ds)", self.auto_close_idle)
         with self.lock:
             current_time = time.time()
             keys_to_remove: list[tuple[str, str | None]] = []
@@ -282,12 +291,16 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
                     removed_count,
                     orphaned_count,
                 )
+        self.log.debug("Idle file pruning finished")
 
     def _auto_close_loop(self) -> None:
         """Background loop for periodic file idle timeout checks.
 
         Runs until _stop_event is set. Calls _prune_idle_files() at each interval.
         """
+        if self._stop_event is None:
+            return
+
         self.log.info("Auto-close scheduler loop started")
         try:
             while not self._stop_event.wait(self.auto_close_interval):
@@ -308,7 +321,8 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
 
         Safe to call even if scheduler is not running.
         """
-        self._stop_event.set()
+        if self._stop_event is not None:
+            self._stop_event.set()
         if self._auto_close_thread is not None:
             self.log.info("Stopping auto-close scheduler")
             self._auto_close_thread.join(timeout=5)
