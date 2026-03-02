@@ -32,6 +32,8 @@ class ServerConfig:
     health_check_enabled: bool
     health_check_bind_address: str
     health_check_port: int
+    auto_close_interval: int
+    auto_close_idle: int
 
 
 def _get_server_config() -> ServerConfig:
@@ -77,6 +79,18 @@ def _get_server_config() -> ServerConfig:
     parser.add_env_argument(
         "--health-check-port", type=int, help="Port to run insecure health check service on.", default=50052
     )
+    parser.add_env_argument(
+        "--auto-close-interval",
+        type=int,
+        help="Interval in seconds for auto-close scheduler. 0 disables the scheduler.",
+        default=0,
+    )
+    parser.add_env_argument(
+        "--auto-close-idle",
+        type=int,
+        help="Idle timeout in seconds before auto-closing files.",
+        default=300,
+    )
 
     args = parser.parse_args()
 
@@ -109,6 +123,8 @@ def _get_server_config() -> ServerConfig:
         health_check_enabled=args.health_check_enabled,
         health_check_bind_address=args.health_check_bind_address,
         health_check_port=args.health_check_port,
+        auto_close_interval=args.auto_close_interval,
+        auto_close_idle=args.auto_close_idle,
     )
 
 
@@ -200,7 +216,11 @@ def serve(server_config: ServerConfig | None = None):
         futures.ThreadPoolExecutor(max_workers=config.max_workers),
         options=_build_server_options(config),
     )
-    exd_grpc.add_ExternalDataReaderServicer_to_server(ExternalDataReader(), server)
+    exd_reader = ExternalDataReader(
+        auto_close_interval=config.auto_close_interval,
+        auto_close_idle=config.auto_close_idle,
+    )
+    exd_grpc.add_ExternalDataReaderServicer_to_server(exd_reader, server)
 
     if config.use_tls:
         bound_port = server.add_secure_port(address, _create_tls_credentials(config))
@@ -224,6 +244,7 @@ def serve(server_config: ServerConfig | None = None):
     try:
         server.wait_for_termination()
     finally:
+        exd_reader.stop_auto_close()
         if health_check_server is not None:
             health_check_server.stop(0)
         logging.info("Servers stopped.")

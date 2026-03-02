@@ -120,11 +120,25 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
         )
         return exd_api.ValuesExResult()  # never reached
 
-    def __init__(self) -> None:
+    def __init__(self, auto_close_interval: int = 0, auto_close_idle: int = 300) -> None:
         self.connect_count: int = 0
         self.connection_map: dict[str, exd_api.Identifier] = {}
         self.file_map: dict[tuple[str, str | None], FileMapEntry] = {}
         self.lock: threading.Lock = threading.Lock()
+        self.auto_close_interval: int = auto_close_interval
+        self.auto_close_idle: int = auto_close_idle
+        self._stop_event = threading.Event()
+        self._auto_close_thread: threading.Thread | None = None
+        if auto_close_interval > 0:
+            self._auto_close_thread = threading.Thread(target=self._auto_close_loop, daemon=True)
+            self._auto_close_thread.start()
+            self.log.info(
+                "Auto-close scheduler started (interval=%ds, idle_timeout=%ds)",
+                auto_close_interval,
+                auto_close_idle,
+            )
+        else:
+            self.log.debug("Auto-close scheduler disabled")
 
     def __get_id(self, identifier: exd_api.Identifier) -> str:
         self.connect_count += 1
@@ -209,3 +223,93 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
                     self.log.debug("File handler closed for '%s'", file_path)
                 self.file_map.pop(file_map_key)
                 self.log.debug("File removed from file_map: '%s'", file_path)
+
+    def _prune_idle_files(self) -> None:
+        """Remove idle file entries from file_map if they exceed idle timeout.
+
+        This method is thread-safe (acquires self.lock) and logs all cleanup operations.
+        Cleanup is based solely on last_access_time, not ref_count.
+        """
+        with self.lock:
+            current_time = time.time()
+            keys_to_remove: list[tuple[str, str | None]] = []
+
+            for file_map_key, entry in self.file_map.items():
+                idle_duration = current_time - entry.last_access_time
+                if idle_duration >= self.auto_close_idle:
+                    file_path = file_map_key[0]
+                    self.log.info(
+                        "Auto-closing idle file '%s' (idle: %.1fs, threshold: %ds, ref_count: %d)",
+                        file_path,
+                        idle_duration,
+                        self.auto_close_idle,
+                        entry.ref_count,
+                    )
+                    if entry.file is not None:
+                        try:
+                            entry.file.close()
+                            self.log.debug("File handler closed for '%s'", file_path)
+                        except Exception:
+                            self.log.exception("Error closing file '%s'", file_path)
+                    keys_to_remove.append(file_map_key)
+
+            removed_count = 0
+            for key in keys_to_remove:
+                self.file_map.pop(key, None)
+                self.log.info("Removed idle file from file_map: '%s'", key[0])
+                removed_count += 1
+
+            orphaned_count = 0
+            connection_keys_to_remove: list[str] = []
+            for conn_id, identifier in self.connection_map.items():
+                _, fmk = self.__get_file_map_key(identifier)
+                if fmk not in self.file_map:
+                    file_path = fmk[0]
+                    self.log.warning(
+                        "Removing orphaned connection '%s' (file '%s' was evicted from file_map)",
+                        conn_id,
+                        file_path,
+                    )
+                    connection_keys_to_remove.append(conn_id)
+                    orphaned_count += 1
+
+            for conn_id in connection_keys_to_remove:
+                self.connection_map.pop(conn_id, None)
+
+            if removed_count > 0 or orphaned_count > 0:
+                self.log.info(
+                    "Pruning complete: removed %d file_map entries, cleaned %d orphaned connections",
+                    removed_count,
+                    orphaned_count,
+                )
+
+    def _auto_close_loop(self) -> None:
+        """Background loop for periodic file idle timeout checks.
+
+        Runs until _stop_event is set. Calls _prune_idle_files() at each interval.
+        """
+        self.log.info("Auto-close scheduler loop started")
+        try:
+            while not self._stop_event.wait(self.auto_close_interval):
+                self.log.debug(
+                    "Auto-close check: file_map=%d entries, connection_map=%d entries",
+                    len(self.file_map),
+                    len(self.connection_map),
+                )
+                try:
+                    self._prune_idle_files()
+                except Exception:
+                    self.log.exception("Exception during auto-close pruning")
+        finally:
+            self.log.info("Auto-close scheduler loop stopped")
+
+    def stop_auto_close(self) -> None:
+        """Stop the auto-close scheduler gracefully.
+
+        Safe to call even if scheduler is not running.
+        """
+        self._stop_event.set()
+        if self._auto_close_thread is not None:
+            self.log.info("Stopping auto-close scheduler")
+            self._auto_close_thread.join(timeout=5)
+            self._auto_close_thread = None
