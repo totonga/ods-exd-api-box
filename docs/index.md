@@ -1,17 +1,32 @@
+---
+title: Home
+layout: default
+nav_order: 1
+---
+
 # ods-exd-api-box
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Type checking: mypy](https://img.shields.io/badge/type%20checking-mypy-blue.svg)](http://mypy-lang.org/)
 
 A Python helper package to build **ASAM ODS EXD-API** gRPC plugins/services.
-
-> **📖 Full documentation:** [totonga.github.io/ods-exd-api-box](https://totonga.github.io/ods-exd-api-box/)
 
 ## What is ASAM ODS EXD-API?
 
 The [ASAM ODS](https://www.asam.net/standards/detail/ods/) standard defines how measurement and test data is stored and managed. The **EXD-API** (External Data API) is a gRPC interface that allows ODS servers to read data from external file formats (TDMS, CSV, HDF5, …) without importing the raw data.
+
+An EXD-API plugin acts as a bridge: the ODS server calls the plugin to inspect a file's structure (groups, channels, data types) and to retrieve channel values on demand.
+
+## How this library helps
+
+`ods-exd-api-box` provides the gRPC server scaffolding, protobuf wiring, file registry, and configuration handling so you can focus on the file-reading logic. It offers **two interfaces** at different abstraction levels:
+
+| Interface | Best for | Protobuf knowledge required? |
+|---|---|---|
+| [`ExdFileInterface`](exd-file-interface) | Full control over structure and value mapping | Yes |
+| [`FileSimpleInterface`](file-simple-interface) | Quick plugins using pandas DataFrames | No |
+
+See [Choosing an Interface](interfaces) for a detailed comparison.
 
 ## Installation
 
@@ -23,35 +38,7 @@ pip install ods-exd-api-box
 pip install 'ods-exd-api-box[simple]'
 ```
 
-## Quick Start
-
-### Full-control interface
-
-```python
-from ods_exd_api_box import ExdFileInterface, serve_plugin
-
-class MyFileHandler(ExdFileInterface):
-    # Implement: create, close, fill_structure, get_values
-    ...
-
-if __name__ == "__main__":
-    serve_plugin("my-format", MyFileHandler.create, ["*.myext"])
-```
-
-### Pandas-based simple interface
-
-```python
-from ods_exd_api_box.simple import FileSimpleInterface, serve_plugin_simple
-
-class MySimpleHandler(FileSimpleInterface):
-    # Implement: create, close, data (returns pd.DataFrame)
-    ...
-
-if __name__ == "__main__":
-    serve_plugin_simple("my-format", MySimpleHandler.create, ["*.myext"])
-```
-
-## Architecture
+## Architecture Overview
 
 ```mermaid
 sequenceDiagram
@@ -88,37 +75,53 @@ sequenceDiagram
     end
 ```
 
-## Documentation
+## Quick Start
 
-| Topic | Link |
-|---|---|
-| Architecture & internals | [Architecture](https://totonga.github.io/ods-exd-api-box/architecture) |
-| Choosing an interface | [Comparison](https://totonga.github.io/ods-exd-api-box/interfaces) |
-| ExdFileInterface guide | [Full-control interface](https://totonga.github.io/ods-exd-api-box/exd-file-interface) |
-| FileSimpleInterface guide | [Simple interface](https://totonga.github.io/ods-exd-api-box/file-simple-interface) |
-| Server options & TLS | [Server Options](https://totonga.github.io/ods-exd-api-box/server-options) |
-| Docker deployment | [Docker](https://totonga.github.io/ods-exd-api-box/docker) |
-| Real-world plugins | [Plugins](https://totonga.github.io/ods-exd-api-box/plugins) |
+### Using `ExdFileInterface` (full control)
 
-## Development
+```python
+from ods_exd_api_box import ExdFileInterface, serve_plugin
 
-```bash
-pip install -e ".[dev,simple]"
-python -m unittest discover -s tests
-mypy .
+class MyFileHandler(ExdFileInterface):
+    # Implement create, close, fill_structure, get_values
+    ...
+
+if __name__ == "__main__":
+    serve_plugin(
+        file_type_name="my-format",
+        file_type_factory=MyFileHandler.create,
+        file_type_file_patterns=["*.myext"],
+    )
 ```
 
-## Contributing
+### Using `FileSimpleInterface` (pandas-based)
 
-0. Use dev container or set up local dev environment
-1. Ensure type checking passes: `mypy .`
-2. Run tests: `python -m unittest discover -s tests`
-3. Follow code style (Black, isort)
-4. Add tests for new features
+```python
+from ods_exd_api_box.simple import FileSimpleInterface, serve_plugin_simple
 
-## License
+class MySimpleHandler(FileSimpleInterface):
+    # Implement create, close, data (returns pd.DataFrame)
+    ...
 
-MIT License - see [LICENSE](LICENSE) file for details.
+if __name__ == "__main__":
+    serve_plugin_simple(
+        file_type_name="my-format",
+        file_type_factory=MySimpleHandler.create,
+        file_type_file_patterns=["*.myext"],
+    )
+```
+
+## Documentation
+
+| Page | Description |
+|---|---|
+| [Architecture](architecture) | Internal wiring, call flow, how the two interfaces relate |
+| [Choosing an Interface](interfaces) | Side-by-side comparison of both approaches |
+| [ExdFileInterface Guide](exd-file-interface) | Full-control interface with protobuf |
+| [FileSimpleInterface Guide](file-simple-interface) | Pandas-based simple interface |
+| [Server Options](server-options) | CLI arguments, env vars, TLS configuration |
+| [Docker Deployment](docker) | Containerizing your plugin |
+| [Real-World Plugins](plugins) | Production plugins using this library |
 
 ## References
 

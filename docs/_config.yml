@@ -1,0 +1,27 @@
+title: ods-exd-api-box
+description: Helper package to build ASAM ODS EXD-API gRPC plugins
+remote_theme: just-the-docs/just-the-docs@v0.10.0
+
+url: "https://totonga.github.io"
+baseurl: "/ods-exd-api-box"
+
+color_scheme: light
+
+mermaid:
+  version: "11"
+
+nav_order_sort: asc
+
+aux_links:
+  "GitHub":
+    - "https://github.com/totonga/ods-exd-api-box"
+  "PyPI":
+    - "https://pypi.org/project/ods-exd-api-box/"
+
+footer_content: >-
+  Copyright &copy; 2024-2026 totonga. Distributed under the
+  <a href="https://github.com/totonga/ods-exd-api-box/blob/main/LICENSE">MIT License</a>.
+
+exclude:
+  - Gemfile
+  - Gemfile.lock

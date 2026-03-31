@@ -58,7 +58,7 @@ lint = [
 
 [project.urls]
 Homepage = "https://github.com/totonga/ods-exd-api-box"
-Documentation = "https://github.com/totonga/ods-exd-api-box/tree/main#readme"
+Documentation = "https://totonga.github.io/ods-exd-api-box/"
 Repository = "https://github.com/totonga/ods-exd-api-box"
 Tracker = "https://github.com/totonga/ods-exd-api-box/issues"
 Changelog = "https://github.com/totonga/ods-exd-api-box/blob/main/CHANGELOG.md"
