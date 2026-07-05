@@ -16,8 +16,6 @@ import grpc
 
 from . import ExdFileInterface, FileHandlerRegistry, NotMyFileError, exd_api, exd_grpc
 
-# pylint: disable=invalid-name
-
 
 @dataclass
 class FileMapEntry:
@@ -58,8 +56,10 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
 
     @override
     def Close(
-        self, request: exd_api.Handle, context: grpc.ServicerContext  # pylint: disable=unused-argument
-    ) -> exd_api.Empty:  # pylint: disable=unused-argument
+        self,
+        request: exd_api.Handle,
+        context: grpc.ServicerContext,
+    ) -> exd_api.Empty:
         """Close the connection to an external data file."""
         self.log.info("Close request for handle '%s'", request.uuid)
 
@@ -76,8 +76,7 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
 
         if request.suppress_channels or request.suppress_attributes or 0 != len(request.channel_names):
             self.log.error(
-                "GetStructure: Unsupported options "
-                "(suppress_channels=%s, suppress_attributes=%s, channel_names=%s)",
+                "GetStructure: Unsupported options (suppress_channels=%s, suppress_attributes=%s, channel_names=%s)",
                 request.suppress_channels,
                 request.suppress_attributes,
                 request.channel_names,
@@ -182,7 +181,9 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
             else:
                 self.log.debug(
                     "File '%s' already in file_map, reusing existing handler for connection id '%s'",
-                    file_path, connection_id)
+                    file_path,
+                    connection_id,
+                )
             self.file_map[file_map_key].ref_count += 1
             self.log.debug(
                 "Incremented ref_count for '%s' to %s",

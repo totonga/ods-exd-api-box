@@ -90,11 +90,9 @@ class TestExdApi(unittest.TestCase):
             service.Close(handle, context)
 
     def test_open_not_my_file_in_open(self):
-
         service = ExternalDataReader()
         context = MockServicerContext()
         with tempfile.NamedTemporaryFile(mode="w", delete=True, suffix=".not_my_file") as tmp:
-
             with self.assertRaises(grpc.RpcError) as _:
                 service.Open(
                     exd_api.Identifier(url=pathlib.Path(tmp.name).absolute().resolve().as_uri(), parameters=""),
@@ -104,11 +102,9 @@ class TestExdApi(unittest.TestCase):
             self.assertEqual(context.details(), "Not my file!")
 
     def test_open_not_my_file_in_get_structure(self):
-
         service = ExternalDataReader()
         context = MockServicerContext()
         with tempfile.NamedTemporaryFile(mode="w", delete=True, suffix=".exd_api_test") as tmp:
-
             handle: exd_api.Handle = service.Open(
                 exd_api.Identifier(url=pathlib.Path(tmp.name).absolute().resolve().as_uri(), parameters=""),
                 context,
@@ -224,11 +220,11 @@ class TestExdApi(unittest.TestCase):
 
         try:
             # Open the same file twice
-            handle1 = service.Open(
+            _ = service.Open(
                 exd_api.Identifier(url=self._get_example_file_path("dummy.exd_api_test"), parameters=""),
                 context,
             )
-            handle2 = service.Open(
+            _ = service.Open(
                 exd_api.Identifier(url=self._get_example_file_path("dummy.exd_api_test"), parameters=""),
                 context,
             )
@@ -253,7 +249,7 @@ class TestExdApi(unittest.TestCase):
 
         try:
             # Open first file with param v=1
-            handle1 = service.Open(
+            _ = service.Open(
                 exd_api.Identifier(url=self._get_example_file_path("dummy.exd_api_test"), parameters="v=1"),
                 context,
             )
@@ -353,7 +349,7 @@ class TestExdApi(unittest.TestCase):
                 exd_api.Identifier(url=self._get_example_file_path("dummy.exd_api_test"), parameters=""),
                 context,
             )
-            handle2 = service.Open(
+            _ = service.Open(
                 exd_api.Identifier(url=self._get_example_file_path("dummy.exd_api_test"), parameters=""),
                 context,
             )
@@ -366,7 +362,9 @@ class TestExdApi(unittest.TestCase):
 
             # Both the file_map entry and the orphaned connection should be gone
             self.assertEqual(len(service.file_map), 0, "file_map should be empty")
-            self.assertEqual(len(service.connection_map), 0, "connection_map should be empty (orphaned connection cleaned)")
+            self.assertEqual(
+                len(service.connection_map), 0, "connection_map should be empty (orphaned connection cleaned)"
+            )
 
         finally:
             service.stop_auto_close()
@@ -381,6 +379,7 @@ class TestExdApi(unittest.TestCase):
                 exd_api.Identifier(url=self._get_example_file_path("dummy.exd_api_test"), parameters=""),
                 context,
             )
+            self.assertIsNotNone(handle)
 
             # With idle threshold of 0, file should be evicted immediately on next scheduler run
             time.sleep(2)
@@ -498,7 +497,9 @@ class TestExdApi(unittest.TestCase):
             time.sleep(3)
 
             self.assertEqual(len(service.file_map), 0, "file_map should be empty")
-            self.assertEqual(len(service.connection_map), 0, "connection_map should be empty (both connections cleaned)")
+            self.assertEqual(
+                len(service.connection_map), 0, "connection_map should be empty (both connections cleaned)"
+            )
 
             # Try to access with the remaining handle
             with self.assertRaises(KeyError) as exc_context:

@@ -16,8 +16,6 @@ from ods_exd_api_box.utils.time_helper import TimeHelper
 
 from .file_simple_interface import FileSimpleInterface
 
-# pylint: disable=no-member
-
 
 class FileSimpleRegistry:
     """Registry for managing FileSimple implementations."""
@@ -50,7 +48,7 @@ class FileSimpleRegistry:
 
         if cls._file_type_factory is None or not callable(cls._file_type_factory):
             raise RuntimeError("No implementation registered. Call ExdFileSimpleRegistry.register() first.")
-        return cls._file_type_factory(file_path, parameters)  # pylint: disable=not-callable
+        return cls._file_type_factory(file_path, parameters)
 
 
 class FileSimpleCache:
@@ -178,7 +176,6 @@ class FileSimple(ExdFileInterface):
         return cls(file_path, parameters)
 
     def __init__(self, file_path: str, parameters: str = ""):
-
         self.file: FileSimpleCache | None = FileSimpleCache(file_path, ParamParser.parse_params(parameters))
 
     @override
@@ -190,7 +187,6 @@ class FileSimple(ExdFileInterface):
 
     @override
     def fill_structure(self, structure: exd_api.StructureResult) -> None:
-
         file = self.file
         if file is None:
             raise RuntimeError("File is not opened!")
@@ -219,7 +215,6 @@ class FileSimple(ExdFileInterface):
         for index, (channel_name, channel_datatype, channel_unit, channel_description) in enumerate(
             zip(channel_names, channel_datatypes, channel_units, channel_descriptions), start=0
         ):
-
             new_channel = exd_api.StructureResult.Channel(
                 name=str(channel_name) if channel_name is not None else f"Ch_{index}",  # type: ignore
                 id=index,
@@ -236,7 +231,6 @@ class FileSimple(ExdFileInterface):
 
     @override
     def get_values(self, request: exd_api.ValuesRequest) -> exd_api.ValuesResult:
-
         file = self.file
         if file is None:
             raise RuntimeError("File is not opened!")

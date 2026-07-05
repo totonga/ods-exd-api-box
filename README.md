@@ -2,7 +2,7 @@
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checking: mypy](https://img.shields.io/badge/type%20checking-mypy-blue.svg)](http://mypy-lang.org/)
 
 A Python helper package to build **ASAM ODS EXD-API** gRPC plugins/services.
@@ -113,7 +113,7 @@ mypy .
 0. Use dev container or set up local dev environment
 1. Ensure type checking passes: `mypy .`
 2. Run tests: `python -m unittest discover -s tests`
-3. Follow code style (Black, isort)
+3. Follow code style (Ruff, mypy)
 4. Add tests for new features
 
 ## License

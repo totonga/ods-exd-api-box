@@ -3,15 +3,7 @@
     "editor.formatOnPaste": true,
     "files.trimTrailingWhitespace": true,
     "files.autoSave": "onFocusChange",
-    "flake8.args": [
-        "--max-line-length=119"
-    ],
-    "black-formatter.args": [
-        "--line-length=119"
-    ],
-    "pylint.args": [
-        "--max-line-length=119"
-    ],
+    "ruff.lineLength": 119,
     "editor.codeActionsOnSave": {
         "source.organizeImports": "explicit"
     },
@@ -36,7 +28,7 @@
     ],
     "[python]": {
         "editor.formatOnSave": true,
-        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.defaultFormatter": "charliermarsh.ruff",
         "editor.rulers": [
             119
         ]

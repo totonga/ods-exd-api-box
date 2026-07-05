@@ -284,7 +284,6 @@ class ExternalDataFile(ExdFileInterface):
 
 
 if __name__ == "__main__":
-
     from ods_exd_api_box import serve_plugin
 
     serve_plugin(

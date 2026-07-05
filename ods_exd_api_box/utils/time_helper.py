@@ -7,7 +7,6 @@ from typing import Any
 
 
 class TimeHelper:
-
     @staticmethod
     def to_asam_ods_time(datetime_value: Any) -> str:
         """Convert datetime value to ASAM ODS time format YYYYMMDDhhmmss[fffffffff] (nanoseconds).

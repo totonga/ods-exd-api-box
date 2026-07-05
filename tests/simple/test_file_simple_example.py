@@ -8,8 +8,6 @@ from tests.mock_servicer_context import MockServicerContext
 
 from .file_simple_example import FileSimpleExample
 
-# pylint: disable=no-member
-
 
 class TestFileSimpleExample(unittest.TestCase):
     log = logging.getLogger(__name__)

@@ -72,14 +72,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e '.[simple,dev]'
 
-    - name: Run flake8
+    - name: Run ruff format check
       run: |
-        flake8 ods_exd_api_box/ tests/ || true
+        ruff format --check ods_exd_api_box/ tests/ || true
 
-    - name: Run black check
+    - name: Run ruff lint check
       run: |
-        black --check ods_exd_api_box/ tests/ || true
-
-    - name: Run isort check
-      run: |
-        isort --check-only ods_exd_api_box/ tests/ || true
+        ruff check ods_exd_api_box/ tests/ || true

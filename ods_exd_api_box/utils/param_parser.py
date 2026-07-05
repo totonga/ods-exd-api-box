@@ -8,7 +8,6 @@ import re
 
 
 class ParamParser:
-
     @staticmethod
     def parse_params(parameters: str | None) -> dict[str, object]:
         r"""Parse a parameter string into a dictionary.

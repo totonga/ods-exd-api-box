@@ -181,7 +181,7 @@ def _create_health_check_server(config: ServerConfig) -> grpc.Server | None:
     # Mark the ExternalDataReader service as serving
     health_check_servicer.set(
         "asam.ods.ExternalDataReader",
-        health_pb2.HealthCheckResponse.SERVING,  # pylint: disable=no-member
+        health_pb2.HealthCheckResponse.SERVING,
     )
 
     health_check_bound_port = health_check_server.add_insecure_port(health_check_address)

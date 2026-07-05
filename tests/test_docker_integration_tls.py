@@ -189,23 +189,24 @@ class TestDockerContainerTLS(unittest.TestCase):
         with grpc.insecure_channel(f"localhost:{self.health_check_port}") as channel:
             stub = health_pb2_grpc.HealthStub(channel)
             response: health_pb2.HealthCheckResponse = stub.Check(
-                health_pb2.HealthCheckRequest(service="asam.ods.ExternalDataReader"),  # pylint: disable=no-member
+                health_pb2.HealthCheckRequest(service="asam.ods.ExternalDataReader"),
                 timeout=5,
             )
-            self.assertEqual(response.status, health_pb2.HealthCheckResponse.SERVING)  # pylint: disable=no-member
+            self.assertEqual(response.status, health_pb2.HealthCheckResponse.SERVING)
 
     def test_health_check_watch(self):
         """Test that the health check watch stream works."""
         with grpc.insecure_channel(f"localhost:{self.health_check_port}") as channel:
             stub = health_pb2_grpc.HealthStub(channel)
             responses: Iterator[health_pb2.HealthCheckResponse] = stub.Watch(
-                health_pb2.HealthCheckRequest(service="asam.ods.ExternalDataReader"),  # pylint: disable=no-member
+                health_pb2.HealthCheckRequest(service="asam.ods.ExternalDataReader"),
                 timeout=5,
             )
             # Get first response
             first_response = next(responses)
             self.assertEqual(
-                first_response.status, health_pb2.HealthCheckResponse.SERVING  # pylint: disable=no-member
+                first_response.status,
+                health_pb2.HealthCheckResponse.SERVING,  # pylint: disable=no-member
             )
 
 
