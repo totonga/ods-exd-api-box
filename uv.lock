@@ -761,7 +761,7 @@ provides-extras = ["simple"]
 dev = [
     { name = "build", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=7.0" },
-    { name = "grpcio-tools", specifier = "==1.71.0" },
+    { name = "grpcio-tools", specifier = ">=1.71.0,<2.0.0" },
     { name = "isort", specifier = ">=5.12" },
     { name = "mypy", specifier = ">=1.5" },
     { name = "pandas-stubs", specifier = ">=3.0.3.260530" },
