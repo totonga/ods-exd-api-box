@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
 import threading
 import time
 from dataclasses import dataclass, field
@@ -15,8 +16,6 @@ from urllib.request import url2pathname
 import grpc
 
 from . import ExdFileInterface, FileHandlerRegistry, NotMyFileError, exd_api, exd_grpc
-
-# pylint: disable=invalid-name
 
 
 @dataclass
@@ -30,6 +29,14 @@ class FileMapEntry:
     def update_access_time(self) -> None:
         """Update the last access time to the current time."""
         self.last_access_time = time.time()
+
+
+class StaleHandleError(ValueError):
+    """Raised when a handle belongs to a previous server session."""
+
+
+class InvalidHandleFormatError(ValueError):
+    """Raised when a handle does not match the expected format."""
 
 
 class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
@@ -50,7 +57,6 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
         try:
             connection_id = self.__open_file(request)
             self.log.info("Successfully opened file '%s' with connection ID '%s'", request.url, connection_id)
-
             return exd_api.Handle(uuid=connection_id)
         except NotMyFileError:
             context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Not my file!")
@@ -58,12 +64,19 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
 
     @override
     def Close(
-        self, request: exd_api.Handle, context: grpc.ServicerContext  # pylint: disable=unused-argument
-    ) -> exd_api.Empty:  # pylint: disable=unused-argument
+        self,
+        request: exd_api.Handle,
+        context: grpc.ServicerContext,
+    ) -> exd_api.Empty:
         """Close the connection to an external data file."""
         self.log.info("Close request for handle '%s'", request.uuid)
 
-        self.__close_file(request)
+        try:
+            self.__close_file(request)
+        except (InvalidHandleFormatError, StaleHandleError) as exc:
+            self.__abort_for_handle_error(context, exc)
+            raise  # for type checker
+
         self.log.info("Successfully closed connection '%s'", request.uuid)
         return exd_api.Empty()
 
@@ -76,15 +89,18 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
 
         if request.suppress_channels or request.suppress_attributes or 0 != len(request.channel_names):
             self.log.error(
-                "GetStructure: Unsupported options "
-                "(suppress_channels=%s, suppress_attributes=%s, channel_names=%s)",
+                "GetStructure: Unsupported options (suppress_channels=%s, suppress_attributes=%s, channel_names=%s)",
                 request.suppress_channels,
                 request.suppress_attributes,
                 request.channel_names,
             )
             context.abort(grpc.StatusCode.UNIMPLEMENTED, "Method not implemented!")
 
-        file, identifier = self.__get_file(request.handle)
+        try:
+            file, identifier = self.__get_file(request.handle)
+        except (InvalidHandleFormatError, StaleHandleError) as exc:
+            self.__abort_for_handle_error(context, exc)
+            raise  # for type checker
 
         self.log.debug("Retrieved file handler for handle '%s'", request.handle.uuid)
 
@@ -95,7 +111,6 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
         try:
             file.fill_structure(rv)
             self.log.debug("Structure filled successfully for handle '%s'", request.handle.uuid)
-
             return rv
         except NotMyFileError:
             context.abort(grpc.StatusCode.FAILED_PRECONDITION, "Not my file!")
@@ -108,7 +123,11 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
             "GetValues request for handle '%s', channels: %s", request.handle.uuid, len(request.channel_ids)
         )
 
-        file, _ = self.__get_file(request.handle)
+        try:
+            file, _ = self.__get_file(request.handle)
+        except (InvalidHandleFormatError, StaleHandleError) as exc:
+            self.__abort_for_handle_error(context, exc)
+            raise  # for type checker
 
         self.log.debug("Retrieving values for handle '%s'", request.handle.uuid)
         result = file.get_values(request)
@@ -126,14 +145,16 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
 
     def __init__(self, auto_close_interval: int = 0, auto_close_idle: int = 900) -> None:
         self.connect_count: int = 0
+        self._server_session_id: str = secrets.token_hex(6)
         self.connection_map: dict[str, exd_api.Identifier] = {}
         self.file_map: dict[tuple[str, str | None], FileMapEntry] = {}
         self.lock: threading.Lock = threading.Lock()
         self.auto_close_interval: int = auto_close_interval
         self.auto_close_idle: int = auto_close_idle
-        ###### Auto-close scheduler member ######
         self._auto_close_thread: threading.Thread | None = None
         self._stop_event: threading.Event | None = None
+
+        self.log.debug("ExternalDataReader session id: %s", self._server_session_id)
 
         # only create stop event when scheduler is active
         if auto_close_interval > 0:
@@ -148,11 +169,28 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
         else:
             self.log.debug("Auto-close scheduler disabled")
 
+    def __abort_for_handle_error(self, context: grpc.ServicerContext, error: Exception) -> None:
+        if isinstance(error, InvalidHandleFormatError):
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(error))
+        context.abort(grpc.StatusCode.FAILED_PRECONDITION, str(error))
+
     def __get_id(self, identifier: exd_api.Identifier) -> str:
         self.connect_count += 1
-        rv = str(self.connect_count)
+        rv = f"{self._server_session_id}:{self.connect_count:06d}"
         self.connection_map[rv] = identifier
         return rv
+
+    def __validate_handle(self, handle_uuid: str) -> None:
+        """Validate handle format and session ownership before lookup."""
+        session_id, separator, counter = handle_uuid.partition(":")
+        if separator != ":" or not session_id or not counter:
+            raise InvalidHandleFormatError(
+                "Invalid handle format. Expected '<session_id>:<counter>'. Re-open the file."
+            )
+        if not counter.isdigit():
+            raise InvalidHandleFormatError("Invalid handle format. Counter part must be numeric. Re-open the file.")
+        if session_id != self._server_session_id:
+            raise StaleHandleError("Handle belongs to a previous server session. Re-open the file.")
 
     @staticmethod
     def __uri_to_path(uri: str) -> str:
@@ -182,7 +220,9 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
             else:
                 self.log.debug(
                     "File '%s' already in file_map, reusing existing handler for connection id '%s'",
-                    file_path, connection_id)
+                    file_path,
+                    connection_id,
+                )
             self.file_map[file_map_key].ref_count += 1
             self.log.debug(
                 "Incremented ref_count for '%s' to %s",
@@ -192,6 +232,7 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
             return connection_id
 
     def __get_file(self, handle: exd_api.Handle) -> tuple[ExdFileInterface, exd_api.Identifier]:
+        self.__validate_handle(handle.uuid)
         identifier = self.connection_map.get(handle.uuid)
         if identifier is None:
             self.log.error("Handle '%s' not found in connection_map", handle.uuid)
@@ -209,6 +250,7 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
         return entry.file, identifier
 
     def __close_file(self, handle: exd_api.Handle) -> None:
+        self.__validate_handle(handle.uuid)
         with self.lock:
             identifier = self.connection_map.get(handle.uuid)
             if identifier is None:
