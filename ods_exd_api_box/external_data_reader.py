@@ -87,6 +87,9 @@ class ExternalDataReader(exd_grpc.ExternalDataReaderServicer):
         """Get the structure of the external data file."""
         self.log.debug("GetStructure request for handle '%s'", request.handle.uuid)
 
+        if request.handle.uuid.startswith("exd://info"):
+            return FileHandlerRegistry.get_info()
+
         if request.suppress_channels or request.suppress_attributes or 0 != len(request.channel_names):
             self.log.error(
                 "GetStructure: Unsupported options (suppress_channels=%s, suppress_attributes=%s, channel_names=%s)",

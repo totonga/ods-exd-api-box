@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Callable
 
-from . import ExdFileInterface
+from . import ExdFileInterface, exd_api
 
 
 @dataclass
@@ -18,6 +19,15 @@ class FileType:
     name: str
     file_patterns: list[str]
     factory: Callable[[str, str], ExdFileInterface]
+
+    def json(self) -> str:
+        """Return a JSON-serializable representation of the file type."""
+        return json.dumps(
+            {
+                "name": self.name,
+                "patterns": self.file_patterns,
+            }
+        )
 
 
 class FileHandlerRegistry:
@@ -145,3 +155,11 @@ class FileHandlerRegistry:
         file_type_name = cls.get_file_type_name(file_path)
         cls.log.debug("Detected file type '%s', creating handler", file_type_name)
         return cls.create(file_type_name, file_path, parameters)
+
+    @classmethod
+    def get_info(cls) -> exd_api.StructureResult:
+        info = exd_api.StructureResult()
+        if cls._handlers:
+            for file_type_name, file_type_info in cls._handlers.items():
+                info.attributes.variables[file_type_name].string_array.values.append(file_type_info.json())
+        return info

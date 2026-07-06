@@ -117,7 +117,7 @@ if __name__ == "__main__":
 |---|---|
 | [Architecture](architecture) | Internal wiring, call flow, how the two interfaces relate |
 | [Choosing an Interface](interfaces) | Side-by-side comparison of both approaches |
-| [ExdFileInterface Guide](exd-file-interface) | Full-control interface with protobuf |
+| [ExdFileInterface Guide](exd-file-interface) | Full-control interface with protobuf, including the [info endpoint extension](exd-file-interface#info-endpoint-extension) |
 | [FileSimpleInterface Guide](file-simple-interface) | Pandas-based simple interface |
 | [Server Options](server-options) | CLI arguments, env vars, TLS configuration |
 | [Docker Deployment](docker) | Containerizing your plugin |

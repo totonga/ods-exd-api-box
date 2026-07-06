@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import pathlib
 import tempfile
@@ -614,3 +615,126 @@ class TestExdApi(unittest.TestCase):
 
         finally:
             service.stop_auto_close()
+
+    def test_get_info_returns_structure_result(self):
+        """Test basic info endpoint with single handler registered without patterns."""
+        FileHandlerRegistry._handlers.clear()
+        FileHandlerRegistry.register(file_type_name="test", factory=ExternalDataFile.create)
+
+        service = ExternalDataReader()
+        context = MockServicerContext()
+
+        info = service.GetStructure(exd_api.StructureRequest(handle=exd_api.Handle(uuid="exd://info")), context)
+
+        self.assertIsNotNone(info)
+        self.assertEqual(len(info.attributes.variables), 1)
+        self.assertIn("test", info.attributes.variables)
+
+        handler_info = json.loads(info.attributes.variables["test"].string_array.values[0])
+        self.assertEqual(handler_info["name"], "test")
+        self.assertEqual(handler_info["patterns"], [])
+
+    def test_get_info_with_file_patterns(self):
+        """Test info endpoint with handler that has multiple file patterns."""
+        FileHandlerRegistry._handlers.clear()
+        FileHandlerRegistry.register(
+            file_type_name="test",
+            factory=ExternalDataFile.create,
+            file_patterns=["*.test", "*.exd_api_test", "*.dat"],
+        )
+
+        service = ExternalDataReader()
+        context = MockServicerContext()
+
+        info = service.GetStructure(exd_api.StructureRequest(handle=exd_api.Handle(uuid="exd://info")), context)
+
+        self.assertEqual(len(info.attributes.variables), 1)
+        handler_info = json.loads(info.attributes.variables["test"].string_array.values[0])
+        self.assertEqual(handler_info["name"], "test")
+        self.assertEqual(handler_info["patterns"], ["*.test", "*.exd_api_test", "*.dat"])
+
+    def test_get_info_multiple_handlers(self):
+        """Test info endpoint lists all registered handlers."""
+        FileHandlerRegistry._handlers.clear()
+        FileHandlerRegistry.register(
+            file_type_name="test",
+            factory=ExternalDataFile.create,
+            file_patterns=["*.test"],
+        )
+        FileHandlerRegistry.register(
+            file_type_name="hdf5",
+            factory=ExternalDataFile.create,
+            file_patterns=["*.h5", "*.hdf5"],
+        )
+        FileHandlerRegistry.register(
+            file_type_name="tdms",
+            factory=ExternalDataFile.create,
+            file_patterns=["*.tdms"],
+        )
+
+        service = ExternalDataReader()
+        context = MockServicerContext()
+
+        info = service.GetStructure(exd_api.StructureRequest(handle=exd_api.Handle(uuid="exd://info")), context)
+
+        self.assertEqual(len(info.attributes.variables), 3)
+        self.assertIn("test", info.attributes.variables)
+        self.assertIn("hdf5", info.attributes.variables)
+        self.assertIn("tdms", info.attributes.variables)
+
+        test_info = json.loads(info.attributes.variables["test"].string_array.values[0])
+        self.assertEqual(test_info["name"], "test")
+        self.assertEqual(test_info["patterns"], ["*.test"])
+
+        hdf5_info = json.loads(info.attributes.variables["hdf5"].string_array.values[0])
+        self.assertEqual(hdf5_info["name"], "hdf5")
+        self.assertEqual(hdf5_info["patterns"], ["*.h5", "*.hdf5"])
+
+        tdms_info = json.loads(info.attributes.variables["tdms"].string_array.values[0])
+        self.assertEqual(tdms_info["name"], "tdms")
+        self.assertEqual(tdms_info["patterns"], ["*.tdms"])
+
+    def test_get_info_empty_registry(self):
+        """Test info endpoint with no handlers registered returns empty attributes."""
+        FileHandlerRegistry._handlers.clear()
+
+        service = ExternalDataReader()
+        context = MockServicerContext()
+
+        info = service.GetStructure(exd_api.StructureRequest(handle=exd_api.Handle(uuid="exd://info")), context)
+
+        self.assertIsNotNone(info)
+        self.assertEqual(len(info.attributes.variables), 0)
+
+    def test_get_info_json_structure(self):
+        """Test that the JSON value contains exactly the expected keys."""
+        FileHandlerRegistry._handlers.clear()
+        FileHandlerRegistry.register(
+            file_type_name="mytype",
+            factory=ExternalDataFile.create,
+            file_patterns=["*.my1", "*.my2"],
+        )
+
+        service = ExternalDataReader()
+        context = MockServicerContext()
+
+        info = service.GetStructure(exd_api.StructureRequest(handle=exd_api.Handle(uuid="exd://info")), context)
+
+        json_str = info.attributes.variables["mytype"].string_array.values[0]
+        handler_info = json.loads(json_str)
+
+        self.assertSetEqual(set(handler_info.keys()), {"name", "patterns"})
+        self.assertIsInstance(handler_info["name"], str)
+        self.assertIsInstance(handler_info["patterns"], list)
+        self.assertTrue(all(isinstance(p, str) for p in handler_info["patterns"]))
+
+    def test_get_info_uuid_prefix_triggers_info(self):
+        """Test that any UUID starting with 'exd://info' triggers the info endpoint."""
+        service = ExternalDataReader()
+        context = MockServicerContext()
+
+        for uuid in ["exd://info", "exd://info/", "exd://infofile"]:
+            with self.subTest(uuid=uuid):
+                info = service.GetStructure(exd_api.StructureRequest(handle=exd_api.Handle(uuid=uuid)), context)
+                self.assertIsNotNone(info)
+                self.assertIn("test", info.attributes.variables)
