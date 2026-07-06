@@ -211,6 +211,51 @@ ValuesResult
         └── <typed_array>   (double_array, string_array, long_array, ...)
 ```
 
+## Info Endpoint (Extension)
+
+> **Note:** This is an extension to the standard ASAM ODS EXD-API interface. Standard-compliant clients do not need to use it, but it provides a convenient way to inspect what file types a running plugin supports.
+
+The server exposes a built-in discovery endpoint through the standard `GetStructure` RPC. Calling `GetStructure` with a handle whose `uuid` starts with `"exd://info"` — without calling `Open` first — returns a `StructureResult` describing all registered file handlers.
+
+### How to call it
+
+```python
+import json
+import grpc
+from ods_exd_api_box import exd_api, exd_grpc
+
+with grpc.insecure_channel("localhost:50051") as channel:
+    service = exd_grpc.ExternalDataReaderStub(channel)
+
+    info = service.GetStructure(
+        exd_api.StructureRequest(handle=exd_api.Handle(uuid="exd://info")),
+        None,
+    )
+
+    for file_type_name, variable in info.attributes.variables.items():
+        handler_info = json.loads(variable.string_array.values[0])
+        print(handler_info["name"])      # e.g. "MDF4"
+        print(handler_info["patterns"])  # e.g. ["*.mdf4"]
+```
+
+### Response format
+
+Each registered handler appears as an entry in `attributes.variables`, keyed by the file type name. The value is a `ContextVariableValue` containing a single JSON string in `string_array.values[0]`:
+
+```json
+{
+  "name": "MDF4",
+  "patterns": ["*.mdf4"]
+}
+```
+
+| JSON field | Description |
+|---|---|
+| `name` | The file type name as registered with `FileHandlerRegistry` / `serve_plugin()` |
+| `patterns` | Glob patterns passed as `file_type_file_patterns` in `serve_plugin()` |
+
+An empty `attributes.variables` map means no file handlers have been registered yet.
+
 ## Next Steps
 
 - [Server Options](server-options) — CLI arguments, environment variables, TLS

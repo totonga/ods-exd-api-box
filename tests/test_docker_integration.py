@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import pathlib
 import socket
@@ -151,6 +152,22 @@ class TestDockerContainer(unittest.TestCase):
 
             finally:
                 service.Close(handle, None)
+
+    def test_get_info(self):
+        with grpc.insecure_channel("localhost:50051") as channel:
+            service = exd_grpc.ExternalDataReaderStub(channel)
+
+            info: exd_api.StructureResult = service.GetStructure(
+                exd_api.StructureRequest(handle=exd_api.Handle(uuid="exd://info")), None
+            )
+            logging.info(MessageToJson(info))
+
+            self.assertGreater(len(info.attributes.variables), 0)
+            for file_type_name, variable in info.attributes.variables.items():
+                self.assertEqual(len(variable.string_array.values), 1)
+                handler_info = json.loads(variable.string_array.values[0])
+                self.assertEqual(handler_info["name"], file_type_name)
+                self.assertIn("patterns", handler_info)
 
 
 class TestDockerContainerWithHealthCheck(unittest.TestCase):
